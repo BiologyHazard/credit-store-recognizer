@@ -4,8 +4,7 @@ import csv
 import datetime
 import json
 from pathlib import Path
-from collections import Counter
-from accounts import get_index_by_nickname
+from accounts import get_account_by_nickname
 
 shop_items = [
     '龙门币小',
@@ -125,7 +124,7 @@ def analyze(csv_folder: Path, output_csv_path: Path):
         assert count % 10 == 0
         天数 = count // 10
         if 天数 == 0:
-            rows.append({'序号': get_index_by_nickname(nickname), '天数': '0'})
+            rows.append({'序号': get_account_by_nickname(nickname)['序号'], '天数': '0'})
             continue
         平均每天白材料 = sum(item_counter[k] for k in T0_materials) / 天数
         平均每天绿材料 = sum(item_counter[k] for k in T1_materials) / 天数
@@ -140,7 +139,7 @@ def analyze(csv_folder: Path, output_csv_path: Path):
         平均每天技巧概要 = (item_counter["技巧概要·卷1"] + item_counter["技巧概要·卷2"]) / 天数
         技巧概要卷_2占技巧概要 = item_counter["技巧概要·卷2"] / (item_counter["技巧概要·卷1"] + item_counter["技巧概要·卷2"] + 1e-10)
         rows.append({
-            '序号': get_index_by_nickname(nickname),
+            '序号': get_account_by_nickname(nickname)['序号'],
             '天数': 天数,
             '平均每天白材料': f'{平均每天白材料:.6f}',
             '平均每天绿材料': f'{平均每天绿材料:.6f}',
