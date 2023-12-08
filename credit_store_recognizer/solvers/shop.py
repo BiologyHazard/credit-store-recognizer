@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from typing import Any, NamedTuple
 
 import cv2
 import numpy as np
@@ -12,7 +13,6 @@ from ..utils import segment
 from ..utils.digit_reader import DigitReader
 from ..utils.image import loadimg, scope2slice
 from ..utils.log import logger
-from typing import NamedTuple
 
 
 class CreditStoreItem(NamedTuple):
@@ -20,10 +20,23 @@ class CreditStoreItem(NamedTuple):
     discount: int
     sold: bool
 
+    def json(self) -> dict[str, Any]:
+        return {
+            'name': self.name,
+            'discount': self.discount,
+            'sold': self.sold,
+        }
+
 
 class CreditStore(NamedTuple):
     credit: int
     items: list[CreditStoreItem]
+
+    def json(self) -> dict[str, Any]:
+        return {
+            'credit': self.credit,
+            'items': [item.json() for item in self.items],
+        }
 
 
 class ShopSolver:
@@ -70,7 +83,7 @@ class ShopSolver:
                 logger.error((i, 'OCR未返回结果'))
                 item_name = 'UNKNOWN'
             item_name = ocr[0][1]
-            if item_name not in list(shop_items.keys()):
+            if item_name not in shop_items:
                 logger.error((i, 'OCR结果不在列表中', item_name))
                 # item_name = ocr_rectify(img[scope2slice(scope)], ocr, shop_items, '物品名称')
 
