@@ -4,28 +4,27 @@ import json
 import threading
 from pathlib import Path
 
+import cv2
 from PIL import Image, ImageDraw, ImageFont
 
 from credit_store_recognizer.solvers.shop import CreditStore, ShopSolver
 from credit_store_recognizer.utils.image import loadimg
 from credit_store_recognizer.utils.log import logger, set_level
 
-set_level('INFO')
-
 
 def draw(image: Image.Image, result: CreditStore) -> Image.Image:
     credit_pos = (1600, 30)
     item_poses = [
-        ((25, 222), (399, 588)),
-        ((399, 222), (773, 588)),
-        ((773, 222), (1147, 588)),
-        ((1147, 222), (1521, 588)),
-        ((1521, 222), (1895, 588)),
-        ((25, 588), (399, 955)),
-        ((399, 588), (773, 955)),
-        ((773, 588), (1147, 955)),
-        ((1147, 588), (1521, 955)),
-        ((1521, 588), (1895, 955)),
+        ((25, 222), (399, 576)),
+        ((405, 222), (773, 576)),
+        ((784, 222), (1147, 576)),
+        ((1164, 222), (1521, 576)),
+        ((1544, 222), (1895, 576)),
+        ((25, 603), (399, 957)),
+        ((405, 603), (773, 957)),
+        ((784, 603), (1147, 957)),
+        ((1164, 603), (1521, 957)),
+        ((1544, 603), (1895, 957)),
     ]
     font = ImageFont.truetype(
         r'C:\Users\Administrator\AppData\Local\Microsoft\Windows\Fonts\SourceHanSansSC-Regular.otf', 48)
@@ -47,7 +46,9 @@ def recognize_single(screenshot_path: Path,
                      result: dict[Path, CreditStore]) -> CreditStore:
 
     logger.info(screenshot_path.relative_to(screenshots_folder).as_posix())
-    recognize_result: CreditStore = shop_solver.recognize(loadimg(screenshot_path.as_posix()))
+    img = loadimg(screenshot_path.as_posix())
+    img = cv2.resize(img, (1920, 1080))
+    recognize_result: CreditStore = shop_solver.recognize(img)
     logger.info(recognize_result)
     result[screenshot_path] = recognize_result
 
@@ -59,7 +60,7 @@ def recognize_single(screenshot_path: Path,
     if output_images_folder is not None:
         output_image_path = output_images_folder / screenshot_path.relative_to(screenshots_folder)
         output_image_path.parent.mkdir(parents=True, exist_ok=True)
-        draw(Image.open(screenshot_path), recognize_result).save(output_image_path)
+        draw(Image.open(screenshot_path).resize((1920, 1080)), recognize_result).save(output_image_path)
 
     return recognize_result
 
@@ -76,7 +77,7 @@ def recognize_all(screenshots_folder: Path,
     for path in screenshots_folder.rglob('*.png'):
         if (skip_recognized
                 and output_json_folder is not None
-                and (output_json_folder / path.relative_to(screenshots_folder).with_suffix('.json')).exists()):
+                and (output_json_folder / path.relative_to(screenshots_folder).with_suffix('.json')).is_file()):
             continue
         thread = threading.Thread(
             target=recognize_single,
@@ -88,10 +89,12 @@ def recognize_all(screenshots_folder: Path,
     for thread in threads:
         thread.join()
 
+    logger.info(f'Finished {len(threads)} threads.')
     return result
 
 
 if __name__ == '__main__':
+    set_level('INFO')
     screenshots_folder = Path(r'D:\BioHazard\Documents\Arknights\信用商店统计\信用商店截图')
     output_json_folder = Path(r'D:\BioHazard\Documents\Arknights\信用商店统计\信用商店截图识别结果')
     output_images_folder = Path(r'D:\BioHazard\Documents\Arknights\信用商店统计\信用商店截图标记')

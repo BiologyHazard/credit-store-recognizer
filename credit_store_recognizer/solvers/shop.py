@@ -68,9 +68,10 @@ class ShopSolver:
         for i, scope in enumerate(scopes):
             (x0, y0), (x1, y1) = scope
             dx, dy = x1 - x0, y1 - y0
-            name_scope = ((x0, y0), (x0 + dx, y0 + dy // 5))
+            name_scope = ((x0, y0), (x0 + dx, y0 + dy // 7))
             # scope = (segment_[0], (segment_[1][0], segment_[0][1] + (segment_[1][1] - segment_[0][1]) // 6))
             image_segment = img[scope2slice(name_scope)]
+            image_segment = np.vstack((image_segment, np.ones(image_segment.shape, dtype=np.uint8) * 255))
             # image_segment = cv2.cvtColor(img[scope2slice(scope)], cv2.COLOR_BGR2GRAY)
             # threshold, image_segment = cv2.threshold(image_segment, 180, 255, cv2.THRESH_BINARY)
             # image_segment = cv2.cvtColor(image_segment, cv2.COLOR_GRAY2BGR)
@@ -129,19 +130,26 @@ class ShopSolver:
     def get_discount(self, item_img) -> tuple[bool, int]:
         # 所有图片都匹配一遍，取最可能的
         sold = self.is_sold(item_img)
-        most_probable_key = '0'
-        most_probable_value = 0
-        for key in self.discount:
-            templ = self.discount_sold[key] if sold else self.discount[key]
-            res = cv2.matchTemplate(item_img, templ, cv2.TM_CCOEFF_NORMED)
-            min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
-            if max_val > most_probable_value:
-                most_probable_key = key
-                most_probable_value = max_val
-        if most_probable_value > 0.8:
-            return sold, int(most_probable_key)
-        else:
-            return sold, 0
+        digit_part = item_img[54:106, 0:97]
+        discount = self.digitReader.get_discount(digit_part)
+        if discount not in (0, 50, 75, 95, 99):
+            logger.error(f'折扣识别错误: {discount}')
+            raise
+        return sold, discount
+
+        # most_probable_key = '0'
+        # most_probable_value = 0
+        # for key in self.discount:
+        #     templ = self.discount_sold[key] if sold else self.discount[key]
+        #     res = cv2.matchTemplate(item_img, templ, cv2.TM_CCOEFF_NORMED)
+        #     min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
+        #     if max_val > most_probable_value:
+        #         most_probable_key = key
+        #         most_probable_value = max_val
+        # if most_probable_value > 0.8:
+        #     return sold, int(most_probable_key)
+        # else:
+        #     return sold, 0
 
     def is_sold(self, item_img) -> bool:
         res = cv2.matchTemplate(item_img, self.sold_template, cv2.TM_CCOEFF_NORMED)

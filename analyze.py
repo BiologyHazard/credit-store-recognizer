@@ -3,8 +3,13 @@ from __future__ import annotations
 import csv
 import datetime
 import json
+from collections import defaultdict
 from pathlib import Path
+
 from accounts import get_account_by_nickname
+from credit_store_recognizer.solvers.shop import CreditStore
+from credit_store_recognizer.utils.log import logger, set_level
+from recognize import recognize_all
 
 shop_items = [
     '龙门币小',
@@ -63,8 +68,13 @@ T0_materials = [
 
 
 def path_to_datetime(path: Path) -> datetime.datetime:
-    date_string = path.stem[7:22]
+    if path.stem.startswith('CS'):
+        date_string = path.stem.split('-')[2]
+        date_format = "%m%d%H%M"
+        datetime_object = datetime.datetime.strptime(date_string, date_format).replace(year=2023)
+        return datetime_object
 
+    date_string = path.stem[7:22]
     date_format = "%Y%m%d-%H%M%S"
     datetime_object = datetime.datetime.strptime(date_string, date_format)
     return datetime_object
@@ -78,17 +88,35 @@ def path_to_yj_date(path: Path) -> datetime.date:
     return datetime_to_yj_date(path_to_datetime(path))
 
 
+def relative_path_to_person(path: Path) -> str:
+    if path.stem.startswith('CS-'):
+        return path.stem.split('-')[1]
+    return path.parts[-2]
+
+
 def json_to_csv(recognize_result_folder: Path, output_csv_folder: Path, 忽略含有干员的商店: bool = True):
     output_csv_folder.mkdir(parents=True, exist_ok=True)
-    for path in recognize_result_folder.iterdir():
-        if not path.is_dir():
+    # for path in recognize_result_folder.iterdir():
+    # if not path.is_dir():
+    # continue
+    person_paths = defaultdict(list)
+    for path in recognize_result_folder.rglob('*.json'):
+        # person = path.name
+        person = relative_path_to_person(path.relative_to(recognize_result_folder))
+        if person in ('aa', 'ab', 'ac', 'ad', 'ae', 'af', 'ag', 'ah', 'ai'):
             continue
-        person = path.name
-        json_paths = list(path.glob('*.json'))
+        person_paths[person].append(path)
+
+    for person, json_paths in person_paths.items():
+        # json_paths = list(path.glob('*.json'))
         json_paths.sort(key=path_to_datetime)
         date_to_path: dict[datetime.date, Path] = {}
         for json_path in json_paths:
             date_to_path[path_to_yj_date(json_path)] = json_path
+
+        values = [path.stem for path in date_to_path.values()]
+        if sorted(values) != sorted(set(values)):
+            logger.error('Duplicate date')
 
         with open(output_csv_folder / f'{person}.csv', 'w', encoding='utf-8', newline='') as csvfile:
             csv_writer = csv.writer(csvfile, delimiter='\t', quotechar='|')
@@ -112,7 +140,7 @@ def json_to_csv(recognize_result_folder: Path, output_csv_folder: Path, 忽略�
 def analyze(csv_folder: Path, output_csv_path: Path):
     rows = []
     for path in csv_folder.glob('*.csv'):
-        nickname = path.stem.split('-', 1)[1]
+        nickname = path.stem
         item_counter = {k: 0 for k in shop_items}
         count = 0
         with open(path, 'r', encoding='utf-8', newline='') as csvfile:
@@ -126,21 +154,47 @@ def analyze(csv_folder: Path, output_csv_path: Path):
         if 天数 == 0:
             rows.append({'序号': get_account_by_nickname(nickname)['序号'], '天数': '0'})
             continue
-        平均每天白材料 = sum(item_counter[k] for k in T0_materials) / 天数
-        平均每天绿材料 = sum(item_counter[k] for k in T1_materials) / 天数
+        总共白材料 = sum(item_counter[k] for k in T0_materials)
+        总共绿材料 = sum(item_counter[k] for k in T1_materials)
+        总共材料 = 总共白材料 + 总共绿材料
+        平均每天白材料 = 总共白材料 / 天数
+        平均每天绿材料 = 总共绿材料 / 天数
         平均每天材料 = 平均每天白材料 + 平均每天绿材料
         绿材料占材料 = 平均每天绿材料 / (平均每天白材料 + 平均每天绿材料)
-        平均每天龙门币 = (item_counter["龙门币小"] + item_counter["龙门币大"]) / 天数
-        大龙门币占龙门币 = item_counter["龙门币大"] / (item_counter["龙门币小"] + item_counter["龙门币大"] + 1e-10)
-        平均每天家具零件 = (item_counter["家具零件小"] + item_counter["家具零件大"]) / 天数
-        大家具零件占家具零件 = item_counter["家具零件大"] / (item_counter["家具零件小"] + item_counter["家具零件大"] + 1e-10)
-        平均每天作战记录 = (item_counter["基础作战记录"] + item_counter["初级作战记录"]) / 天数
-        初级作战记录占作战记录 = item_counter["初级作战记录"] / (item_counter["基础作战记录"] + item_counter["初级作战记录"] + 1e-10)
-        平均每天技巧概要 = (item_counter["技巧概要·卷1"] + item_counter["技巧概要·卷2"]) / 天数
-        技巧概要卷_2占技巧概要 = item_counter["技巧概要·卷2"] / (item_counter["技巧概要·卷1"] + item_counter["技巧概要·卷2"] + 1e-10)
+        总共龙门币 = item_counter["龙门币小"] + item_counter["龙门币大"]
+        平均每天龙门币 = 总共龙门币 / 天数
+        大龙门币占龙门币 = item_counter["龙门币大"] / 总共龙门币 if 总共龙门币 != 0 else 0
+        总共家具零件 = item_counter["家具零件小"] + item_counter["家具零件大"]
+        平均每天家具零件 = 总共家具零件 / 天数
+        大家具零件占家具零件 = item_counter["家具零件大"] / 总共家具零件 if 总共家具零件 != 0 else 0
+        总共作战记录 = item_counter["基础作战记录"] + item_counter["初级作战记录"]
+        平均每天作战记录 = 总共作战记录 / 天数
+        初级作战记录占作战记录 = item_counter["初级作战记录"] / 总共作战记录 if 总共作战记录 != 0 else 0
+        总共技巧概要 = item_counter["技巧概要·卷1"] + item_counter["技巧概要·卷2"]
+        平均每天技巧概要 = 总共技巧概要 / 天数
+        技巧概要卷_2占技巧概要 = item_counter["技巧概要·卷2"] / 总共技巧概要 if 总共技巧概要 != 0 else 0
+        总共碳类 = item_counter["碳"] + item_counter["碳素"]
+        平均每天碳类 = 总共碳类 / 天数
+        碳素占碳类 = item_counter["碳素"] / 总共碳类 if 总共碳类 != 0 else 0
+        高阶物品占分等阶物品 = (
+            总共绿材料
+            + item_counter['龙门币大']
+            + item_counter['家具零件大']
+            + item_counter['初级作战记录']
+            + item_counter["技巧概要·卷2"]
+            + item_counter["碳素"]
+        ) / (
+            总共材料
+            + 总共龙门币
+            + 总共家具零件
+            + 总共作战记录
+            + 总共技巧概要
+            + 总共碳类
+        )
         rows.append({
             '序号': get_account_by_nickname(nickname)['序号'],
             '天数': 天数,
+            '高阶物品占分等阶物品': f'{高阶物品占分等阶物品:.4%}',
             '平均每天白材料': f'{平均每天白材料:.6f}',
             '平均每天绿材料': f'{平均每天绿材料:.6f}',
             '平均每天材料': f'{平均每天材料:.6f}',
@@ -153,6 +207,8 @@ def analyze(csv_folder: Path, output_csv_path: Path):
             '初级作战记录占作战记录': f'{初级作战记录占作战记录:.4%}',
             '平均每天技巧概要': f'{平均每天技巧概要:.6f}',
             '技巧概要卷·2占技巧概要': f'{技巧概要卷_2占技巧概要:.4%}',
+            '平均每天碳类': f'{平均每天碳类:.6f}',
+            '碳素占碳类': f'{碳素占碳类:.4%}',
             **{f'平均每天{k}': f'{v / 天数:.6f}' for k, v in item_counter.items()},
             **{f'{k}数量': v for k, v in item_counter.items()},
         })
@@ -174,12 +230,35 @@ def analyze(csv_folder: Path, output_csv_path: Path):
             quotechar='|',
         )
         csv_writer.writeheader()
+        last_index = -1
         for row in rows:
+            index = int(row['序号'])
+            for i in range(last_index + 1, index):
+                csv_writer.writerow({})
             csv_writer.writerow(row)
+            last_index = index
 
 
 if __name__ == '__main__':
+    set_level('INFO')
+    screenshots_folder = Path(r'D:\BioHazard\Documents\Arknights\信用商店统计\信用商店截图')
+    output_json_folder = Path(r'D:\BioHazard\Documents\Arknights\信用商店统计\信用商店截图识别结果')
+    output_images_folder = Path(r'D:\BioHazard\Documents\Arknights\信用商店统计\信用商店截图标记')
+
+    result: dict[Path, CreditStore] = recognize_all(screenshots_folder,
+                                                    output_json_folder=output_json_folder,
+                                                    output_images_folder=output_images_folder)
+    result = recognize_all(Path(r"D:\BioHazard\Documents\Arknights\信用商店统计\孜然的截图"),
+                           Path(r"D:\BioHazard\Documents\Arknights\信用商店统计\孜然的截图识别结果"),
+                           Path(r"D:\BioHazard\Documents\Arknights\信用商店统计\孜然的截图标记"),
+                           True)
+    # print(result)
+
     recognize_result_folder = Path(r'D:\BioHazard\Documents\Arknights\信用商店统计\信用商店截图识别结果')
     output_csv_folder = Path(r'D:\BioHazard\Documents\Arknights\信用商店统计\信用商店按账号统计')
     json_to_csv(recognize_result_folder, output_csv_folder)
+    json_to_csv(Path(r'D:\BioHazard\Documents\Arknights\信用商店统计\孜然的截图识别结果'),
+                Path(r'D:\BioHazard\Documents\Arknights\信用商店统计\孜然的信用商店按账号统计'))
     analyze(output_csv_folder, output_csv_folder.parent / '统计.csv')
+    analyze(Path(r'D:\BioHazard\Documents\Arknights\信用商店统计\孜然的信用商店按账号统计'),
+            Path(r'D:\BioHazard\Documents\Arknights\信用商店统计\孜然的统计.csv'))

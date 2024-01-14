@@ -34,7 +34,7 @@ class DigitReader:
                 self.recruit_template[j],
                 cv2.TM_CCORR_NORMED,
             )
-            threshold = 0.94
+            threshold = 0.90
             loc = np.where(res >= threshold)
             for i in range(len(loc[0])):
                 x = loc[1][i]
@@ -47,6 +47,48 @@ class DigitReader:
                     result[loc[1][i]] = j
 
         l = [str(result[k]) for k in sorted(result)]
+        return int("".join(l))
+
+    def get_discount(self, digit_part):
+        result = {}
+        # digit_part = cv2.cvtColor(digit_part, cv2.COLOR_RGB2GRAY)
+        digit_part = digit_part[:, :, 1]  # green channel
+        digit_part = cv2.threshold(digit_part, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
+        # cv2.imshow('', digit_part)
+        # cv2.waitKey(0)
+        # cv2.destroyAllWindows()
+
+        for j in (0, 5, 7, 9):
+            templ = self.recruit_template[j]
+            templ = cv2.threshold(templ, 128, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
+            # cv2.imshow('', templ)
+            # cv2.waitKey(0)
+            # cv2.destroyAllWindows()
+
+            res = cv2.matchTemplate(
+                digit_part,
+                # self.recruit_template[j],
+                templ,
+                cv2.TM_CCORR_NORMED,
+            )
+            threshold = 0.75
+            loc = np.where(res >= threshold)
+            # print(max(res.flatten()))
+            # print(loc)
+            for i in range(len(loc[0])):
+                x = loc[1][i]
+                accept = True
+                for o in result:
+                    if abs(o - x) < 5:
+                        accept = False
+                        break
+                if accept:
+                    result[loc[1][i]] = j
+
+        l = [str(result[k]) for k in sorted(result)]
+        s = "".join(l)
+        if s == "":
+            return 0
         return int("".join(l))
 
     def get_credit_number(self, digit_part):
