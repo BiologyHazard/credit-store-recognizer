@@ -117,11 +117,6 @@ function single_account {
 }
 
 $player_list = @(
-    # '官服-银矢003#8822',
-    # '官服-Nero#2232',
-    # '官服-eve#7543',
-    # '官服-丿蟒王#5055',
-    # '官服-0F7VS4ZW#2893'
 )
 
 $csv = Import-Csv -Path "D:\BioHazard\Documents\Arknights\信用商店统计\accounts.csv" -Encoding UTF8 -Delimiter `t

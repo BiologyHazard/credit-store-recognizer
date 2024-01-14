@@ -27,6 +27,14 @@ class CreditStoreItem(NamedTuple):
             'sold': self.sold,
         }
 
+    @classmethod
+    def from_json(cls, data: dict[str, Any]) -> CreditStoreItem:
+        return cls(
+            data['name'],
+            data['discount'],
+            data['sold'],
+        )
+
 
 class CreditStore(NamedTuple):
     credit: int
@@ -37,6 +45,13 @@ class CreditStore(NamedTuple):
             'credit': self.credit,
             'items': [item.json() for item in self.items],
         }
+
+    @classmethod
+    def from_json(cls, data: dict[str, Any]) -> CreditStore:
+        return cls(
+            data['credit'],
+            [CreditStoreItem.from_json(item) for item in data['items']],
+        )
 
 
 class ShopSolver:
