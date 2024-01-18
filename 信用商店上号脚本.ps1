@@ -114,6 +114,7 @@ function single_account {
     }
     # adb -s $address pull $android_path $windows_path
     Copy-Item -Path $windows_source_path -Destination $windows_destination_path
+    adb -s $address shell am force-stop $package_name.$server
 }
 
 $player_list = @(

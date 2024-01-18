@@ -137,22 +137,25 @@ def json_to_csv(recognize_result_folder: Path, output_csv_folder: Path, 忽略�
                     ])
 
 
-def analyze(csv_folder: Path, output_csv_path: Path):
-    rows = []
+def analyze(csv_folder: Path, output_result_csv_path: Path, output_data_csv_path: Path):
+    data_rows = []
+    result_rows = []
     for path in csv_folder.glob('*.csv'):
         nickname = path.stem
+        account = get_account_by_nickname(nickname)
         item_counter = {k: 0 for k in shop_items}
         count = 0
         with open(path, 'r', encoding='utf-8', newline='') as csvfile:
             csv_reader = csv.DictReader(csvfile, delimiter='\t', quotechar='|')
             for row in csv_reader:
+                data_rows.append({'账号序号': account['序号'], **row})
                 count += 1
                 item_counter[row['名称']] += 1
 
         assert count % 10 == 0
         天数 = count // 10
         if 天数 == 0:
-            rows.append({'序号': get_account_by_nickname(nickname)['序号'], '天数': '0'})
+            result_rows.append({'序号': get_account_by_nickname(nickname)['序号'], '天数': '0'})
             continue
         总共白材料 = sum(item_counter[k] for k in T0_materials)
         总共绿材料 = sum(item_counter[k] for k in T1_materials)
@@ -191,7 +194,7 @@ def analyze(csv_folder: Path, output_csv_path: Path):
             + 总共技巧概要
             + 总共碳类
         )
-        rows.append({
+        result_rows.append({
             '序号': get_account_by_nickname(nickname)['序号'],
             '天数': 天数,
             '高阶物品占分等阶物品': f'{高阶物品占分等阶物品:.4%}',
@@ -212,9 +215,9 @@ def analyze(csv_folder: Path, output_csv_path: Path):
             **{f'平均每天{k}': f'{v / 天数:.6f}' for k, v in item_counter.items()},
             **{f'{k}数量': v for k, v in item_counter.items()},
         })
-    rows.sort(key=lambda row: int(row['序号']))
+    result_rows.sort(key=lambda row: int(row['序号']))
 
-    with open(output_csv_path, 'w', encoding='utf-8', newline='') as csvfile:
+    with open(output_result_csv_path, 'w', encoding='utf-8', newline='') as csvfile:
         csv_writer = csv.DictWriter(
             csvfile,
             # [
@@ -225,18 +228,30 @@ def analyze(csv_folder: Path, output_csv_path: Path):
             #     *(f'平均每天{k}' for k in shop_items),
             #     *(f'{k}数量' for k in shop_items),
             # ],
-            rows[0].keys(),
+            result_rows[0].keys(),
             delimiter='\t',
             quotechar='|',
         )
         csv_writer.writeheader()
         last_index = -1
-        for row in rows:
+        for row in result_rows:
             index = int(row['序号'])
             for i in range(last_index + 1, index):
                 csv_writer.writerow({})
             csv_writer.writerow(row)
             last_index = index
+
+    data_rows.sort(key=lambda row: int(row['账号序号']))
+    with open(output_data_csv_path, 'w', encoding='utf-8', newline='') as csvfile:
+        csv_writer = csv.DictWriter(
+            csvfile,
+            data_rows[0].keys(),
+            delimiter='\t',
+            quotechar='|',
+        )
+        csv_writer.writeheader()
+        for row in data_rows:
+            csv_writer.writerow(row)
 
 
 if __name__ == '__main__':
@@ -248,17 +263,17 @@ if __name__ == '__main__':
     result: dict[Path, CreditStore] = recognize_all(screenshots_folder,
                                                     output_json_folder=output_json_folder,
                                                     output_images_folder=output_images_folder)
-    result = recognize_all(Path(r"D:\BioHazard\Documents\Arknights\信用商店统计\孜然的截图"),
-                           Path(r"D:\BioHazard\Documents\Arknights\信用商店统计\孜然的截图识别结果"),
-                           Path(r"D:\BioHazard\Documents\Arknights\信用商店统计\孜然的截图标记"),
-                           True)
+    # result = recognize_all(Path(r"D:\BioHazard\Documents\Arknights\信用商店统计\孜然的截图"),
+    #                        Path(r"D:\BioHazard\Documents\Arknights\信用商店统计\孜然的截图识别结果"),
+    #                        Path(r"D:\BioHazard\Documents\Arknights\信用商店统计\孜然的截图标记"),
+    #                        True)
     # print(result)
 
     recognize_result_folder = Path(r'D:\BioHazard\Documents\Arknights\信用商店统计\信用商店截图识别结果')
     output_csv_folder = Path(r'D:\BioHazard\Documents\Arknights\信用商店统计\信用商店按账号统计')
     json_to_csv(recognize_result_folder, output_csv_folder)
-    json_to_csv(Path(r'D:\BioHazard\Documents\Arknights\信用商店统计\孜然的截图识别结果'),
-                Path(r'D:\BioHazard\Documents\Arknights\信用商店统计\孜然的信用商店按账号统计'))
-    analyze(output_csv_folder, output_csv_folder.parent / '统计.csv')
-    analyze(Path(r'D:\BioHazard\Documents\Arknights\信用商店统计\孜然的信用商店按账号统计'),
-            Path(r'D:\BioHazard\Documents\Arknights\信用商店统计\孜然的统计.csv'))
+    # json_to_csv(Path(r'D:\BioHazard\Documents\Arknights\信用商店统计\孜然的截图识别结果'),
+    #             Path(r'D:\BioHazard\Documents\Arknights\信用商店统计\孜然的信用商店按账号统计'))
+    analyze(output_csv_folder, output_csv_folder.parent / '统计.csv', output_csv_folder.parent / '原始数据.csv')
+    # analyze(Path(r'D:\BioHazard\Documents\Arknights\信用商店统计\孜然的信用商店按账号统计'),
+    #         Path(r'D:\BioHazard\Documents\Arknights\信用商店统计\孜然的统计.csv'))
