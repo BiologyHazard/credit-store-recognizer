@@ -263,17 +263,8 @@ if __name__ == '__main__':
     result: dict[Path, CreditStore] = recognize_all(screenshots_folder,
                                                     output_json_folder=output_json_folder,
                                                     output_images_folder=output_images_folder)
-    # result = recognize_all(Path(r"D:\BioHazard\Documents\Arknights\信用商店统计\孜然的截图"),
-    #                        Path(r"D:\BioHazard\Documents\Arknights\信用商店统计\孜然的截图识别结果"),
-    #                        Path(r"D:\BioHazard\Documents\Arknights\信用商店统计\孜然的截图标记"),
-    #                        True)
-    # print(result)
 
     recognize_result_folder = Path(r'D:\BioHazard\Documents\Arknights\信用商店统计\信用商店截图识别结果')
     output_csv_folder = Path(r'D:\BioHazard\Documents\Arknights\信用商店统计\信用商店按账号统计')
     json_to_csv(recognize_result_folder, output_csv_folder)
-    # json_to_csv(Path(r'D:\BioHazard\Documents\Arknights\信用商店统计\孜然的截图识别结果'),
-    #             Path(r'D:\BioHazard\Documents\Arknights\信用商店统计\孜然的信用商店按账号统计'))
     analyze(output_csv_folder, output_csv_folder.parent / '统计.csv', output_csv_folder.parent / '原始数据.csv')
-    # analyze(Path(r'D:\BioHazard\Documents\Arknights\信用商店统计\孜然的信用商店按账号统计'),
-    #         Path(r'D:\BioHazard\Documents\Arknights\信用商店统计\孜然的统计.csv'))
