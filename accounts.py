@@ -31,7 +31,7 @@ accounts_path = Path(r"D:\BioHazard\Documents\Arknights\信用商店统计\accou
 with open(accounts_path, 'r', encoding='utf-8', newline='') as fp:
     csv_reader = csv.DictReader(fp, delimiter='\t', restval=None)
     accounts = [Account.model_validate(row) for row in csv_reader if row['序号'] != '']
-    # rows = list(csv_reader)\
+    # rows = list(csv_reader)
 
 
 @lru_cache
