@@ -5,8 +5,9 @@ import datetime
 import json
 from collections import defaultdict
 from pathlib import Path
+from typing import Any
 
-from accounts import get_account_by_nickname, indexes
+from accounts import filter_accounts, get_account_by_nickname, Account
 from credit_store_recognizer.solvers.shop import CreditStore
 from credit_store_recognizer.utils.log import logger, set_level
 from recognize import recognize_all
@@ -138,24 +139,24 @@ def json_to_csv(recognize_result_folder: Path, output_csv_folder: Path, 忽略�
 
 
 def analyze(csv_folder: Path, output_result_csv_path: Path, output_data_csv_path: Path):
-    data_rows = []
-    result_rows = []
+    data_rows: list[dict[str, Any]] = []
+    result_rows: list[dict[str, Any]] = []
     for path in csv_folder.glob('*.csv'):
-        nickname = path.stem
-        account = get_account_by_nickname(nickname)
-        item_counter = {k: 0 for k in shop_items}
+        nickname: str = path.stem
+        account: Account = get_account_by_nickname(nickname)
+        item_counter: dict[str, int] = {k: 0 for k in shop_items}
         count = 0
         with open(path, 'r', encoding='utf-8', newline='') as csvfile:
             csv_reader = csv.DictReader(csvfile, delimiter='\t', quotechar='|')
             for row in csv_reader:
-                data_rows.append({'账号序号': account['序号'], **row})
+                data_rows.append({'账号序号': account.index, **row})
                 count += 1
                 item_counter[row['名称']] += 1
 
         assert count % 10 == 0
         天数 = count // 10
         if 天数 == 0:
-            result_rows.append({'序号': get_account_by_nickname(nickname)['序号'], '天数': '0'})
+            result_rows.append({'序号': account.index, '天数': '0'})
             continue
         总共白材料 = sum(item_counter[k] for k in T0_materials)
         总共绿材料 = sum(item_counter[k] for k in T1_materials)
@@ -195,7 +196,7 @@ def analyze(csv_folder: Path, output_result_csv_path: Path, output_data_csv_path
             + 总共碳类
         )
         result_rows.append({
-            '序号': get_account_by_nickname(nickname)['序号'],
+            '序号': get_account_by_nickname(nickname).index,
             '天数': 天数,
             '高阶物品占分等阶物品': f'{高阶物品占分等阶物品:.4%}',
             '平均每天白材料': f'{平均每天白材料:.6f}',
@@ -216,8 +217,7 @@ def analyze(csv_folder: Path, output_result_csv_path: Path, output_data_csv_path
             **{f'{k}数量': v for k, v in item_counter.items()},
         })
     # result_rows.sort(key=lambda row: int(row['序号']))
-    result_dict: dict[str, dict[str, str]] = {row['序号']: row for row in result_rows}
-    print(result_dict)
+    result_dict: dict[int, dict] = {row['序号']: row for row in result_rows}
 
     with open(output_result_csv_path, 'w', encoding='utf-8', newline='') as csvfile:
         csv_writer = csv.DictWriter(
@@ -235,11 +235,12 @@ def analyze(csv_folder: Path, output_result_csv_path: Path, output_data_csv_path
             quotechar='|',
         )
         csv_writer.writeheader()
-        for index in indexes:
-            row = result_dict.get(str(index), {})
-            csv_writer.writerow({})
+        for account in filter_accounts(参与信用商店测试=True):
+            index: int = account.index
+            row: dict[str, str] = result_dict.get(index, {})
+            csv_writer.writerow(row)
 
-    data_rows.sort(key=lambda row: int(row['账号序号']))
+    data_rows.sort(key=lambda row: row['账号序号'])
     with open(output_data_csv_path, 'w', encoding='utf-8', newline='') as csvfile:
         csv_writer = csv.DictWriter(
             csvfile,
