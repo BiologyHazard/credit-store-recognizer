@@ -6,7 +6,7 @@ import json
 from collections import defaultdict
 from pathlib import Path
 
-from accounts import get_account_by_nickname
+from accounts import get_account_by_nickname, indexes
 from credit_store_recognizer.solvers.shop import CreditStore
 from credit_store_recognizer.utils.log import logger, set_level
 from recognize import recognize_all
@@ -215,7 +215,9 @@ def analyze(csv_folder: Path, output_result_csv_path: Path, output_data_csv_path
             **{f'平均每天{k}': f'{v / 天数:.6f}' for k, v in item_counter.items()},
             **{f'{k}数量': v for k, v in item_counter.items()},
         })
-    result_rows.sort(key=lambda row: int(row['序号']))
+    # result_rows.sort(key=lambda row: int(row['序号']))
+    result_dict: dict[str, dict[str, str]] = {row['序号']: row for row in result_rows}
+    print(result_dict)
 
     with open(output_result_csv_path, 'w', encoding='utf-8', newline='') as csvfile:
         csv_writer = csv.DictWriter(
@@ -233,13 +235,9 @@ def analyze(csv_folder: Path, output_result_csv_path: Path, output_data_csv_path
             quotechar='|',
         )
         csv_writer.writeheader()
-        last_index = -1
-        for row in result_rows:
-            index = int(row['序号'])
-            for i in range(last_index + 1, index):
-                csv_writer.writerow({})
-            csv_writer.writerow(row)
-            last_index = index
+        for index in indexes:
+            row = result_dict.get(str(index), {})
+            csv_writer.writerow({})
 
     data_rows.sort(key=lambda row: int(row['账号序号']))
     with open(output_data_csv_path, 'w', encoding='utf-8', newline='') as csvfile:

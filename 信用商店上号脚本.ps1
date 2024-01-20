@@ -126,7 +126,11 @@ foreach ($row in $csv) {
     $昵称 = $row.昵称
     $账号 = $row.账号
     $密码 = $row.密码
+    $参与信用商店测试 = $row.参与信用商店测试
     if (-not ($区服 -and $昵称 -and $账号 -and $密码)) {
+        continue
+    }
+    if (-not $参与信用商店测试 -eq "TRUE") {
         continue
     }
     if ($player_list -and ($player_list -notcontains "$区服-$昵称")) {
