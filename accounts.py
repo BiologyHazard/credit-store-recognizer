@@ -16,12 +16,11 @@ class Account(BaseModel):
     password: Optional[str] = Field(alias='密码')
     id: Optional[str] = Field(alias='ID')
     nickname: Optional[str] = Field(alias='昵称')
-    参与信用商店测试: Optional[bool] = Field(alias='参与信用商店测试')
-    参与裁缝测试: Optional[bool] = Field(alias='参与裁缝测试')
+    # 参与信用商店测试: Optional[bool] = Field(alias='参与信用商店测试')
+    # 参与裁缝测试: Optional[bool] = Field(alias='参与裁缝测试')
 
     @field_validator(
-        'owner', 'bilibili_nickname', 'server', 'account', 'password',
-        'id', 'nickname', '参与信用商店测试', '参与裁缝测试',
+        'owner', 'bilibili_nickname', 'server', 'account', 'password', 'id', 'nickname',
         mode='before',
     )
     def empty_str_to_None(cls, v):
@@ -48,10 +47,10 @@ def get_account_by_nickname(nickname: str) -> Account:
     raise ValueError(f'No account named {nickname}')
 
 
-@lru_cache
-def filter_accounts(参与信用商店测试: bool | None = None, 参与裁缝测试: bool | None = None) -> list[Account]:
-    return [
-        account for account in accounts
-        if (参与信用商店测试 is None or account.参与信用商店测试 == 参与信用商店测试)
-        and (参与裁缝测试 is None or account.参与裁缝测试 == 参与信用商店测试)
-    ]
+# @lru_cache
+# def filter_accounts(参与信用商店测试: bool | None = None, 参与裁缝测试: bool | None = None) -> list[Account]:
+#     return [
+#         account for account in accounts
+#         if (参与信用商店测试 is None or account.参与信用商店测试 == 参与信用商店测试)
+#         and (参与裁缝测试 is None or account.参与裁缝测试 == 参与信用商店测试)
+#     ]

@@ -7,7 +7,7 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
-from accounts import filter_accounts, get_account_by_nickname, Account
+from accounts import Account, accounts, get_account_by_nickname
 from credit_store_recognizer.solvers.shop import CreditStore
 from credit_store_recognizer.utils.log import logger, set_level
 from recognize import recognize_all
@@ -196,7 +196,7 @@ def analyze(csv_folder: Path, output_result_csv_path: Path, output_data_csv_path
             + 总共碳类
         )
         result_rows.append({
-            '序号': get_account_by_nickname(nickname).index,
+            '序号': account.index,
             '天数': 天数,
             '高阶物品占分等阶物品': f'{高阶物品占分等阶物品:.4%}',
             '平均每天白材料': f'{平均每天白材料:.6f}',
@@ -235,7 +235,7 @@ def analyze(csv_folder: Path, output_result_csv_path: Path, output_data_csv_path
             quotechar='|',
         )
         csv_writer.writeheader()
-        for account in filter_accounts(参与信用商店测试=True):
+        for account in accounts:
             index: int = account.index
             row: dict[str, str] = result_dict.get(index, {})
             csv_writer.writerow(row)
