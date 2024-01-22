@@ -7,7 +7,7 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
-from accounts import Account, accounts, get_account_by_nickname
+from accounts import Account, filter_accounts, get_account_by_nickname
 from credit_store_recognizer.solvers.shop import CreditStore
 from credit_store_recognizer.utils.log import logger, set_level
 from recognize import recognize_all
@@ -89,7 +89,7 @@ def path_to_yj_date(path: Path) -> datetime.date:
     return datetime_to_yj_date(path_to_datetime(path))
 
 
-def relative_path_to_person(path: Path) -> str:
+def path_to_person(path: Path) -> str:
     if path.stem.startswith('CS-'):
         return path.stem.split('-')[1]
     return path.parts[-2]
@@ -97,13 +97,9 @@ def relative_path_to_person(path: Path) -> str:
 
 def json_to_csv(recognize_result_folder: Path, output_csv_folder: Path, 忽略含有干员的商店: bool = True):
     output_csv_folder.mkdir(parents=True, exist_ok=True)
-    # for path in recognize_result_folder.iterdir():
-    # if not path.is_dir():
-    # continue
     person_paths = defaultdict(list)
     for path in recognize_result_folder.rglob('*.json'):
-        # person = path.name
-        person = relative_path_to_person(path.relative_to(recognize_result_folder))
+        person = path_to_person(path)
         if person in ('aa', 'ab', 'ac', 'ad', 'ae', 'af', 'ag', 'ah', 'ai'):
             continue
         person_paths[person].append(path)
@@ -132,7 +128,7 @@ def json_to_csv(recognize_result_folder: Path, output_csv_folder: Path, 忽略�
                         date.strftime('%Y-%m-%d'),
                         i,
                         item['name'],
-                        f"{-item['discount']}%",
+                        item['discount'],
                         item['sold'],
                         data['credit'],
                     ])
@@ -145,6 +141,7 @@ def analyze(csv_folder: Path, output_result_csv_path: Path, output_data_csv_path
         nickname: str = path.stem
         account: Account = get_account_by_nickname(nickname)
         item_counter: dict[str, int] = {k: 0 for k in shop_items}
+        discount_counter: dict[int, int] = {0: 0, 50: 0, 75: 0, 95: 0, 99: 0}
         count = 0
         with open(path, 'r', encoding='utf-8', newline='') as csvfile:
             csv_reader = csv.DictReader(csvfile, delimiter='\t', quotechar='|')
@@ -152,6 +149,7 @@ def analyze(csv_folder: Path, output_result_csv_path: Path, output_data_csv_path
                 data_rows.append({'账号序号': account.index, **row})
                 count += 1
                 item_counter[row['名称']] += 1
+                discount_counter[int(row['折扣'])] += 1
 
         assert count % 10 == 0
         天数 = count // 10
@@ -195,6 +193,7 @@ def analyze(csv_folder: Path, output_result_csv_path: Path, output_data_csv_path
             + 总共技巧概要
             + 总共碳类
         )
+
         result_rows.append({
             '序号': account.index,
             '天数': 天数,
@@ -213,6 +212,7 @@ def analyze(csv_folder: Path, output_result_csv_path: Path, output_data_csv_path
             '技巧概要卷·2占技巧概要': f'{技巧概要卷_2占技巧概要:.4%}',
             '平均每天碳类': f'{平均每天碳类:.6f}',
             '碳素占碳类': f'{碳素占碳类:.4%}',
+            **{f'平均每天-{k}%数量': f'{v / 天数:.6f}' for k, v in discount_counter.items()},
             **{f'平均每天{k}': f'{v / 天数:.6f}' for k, v in item_counter.items()},
             **{f'{k}数量': v for k, v in item_counter.items()},
         })
@@ -235,7 +235,7 @@ def analyze(csv_folder: Path, output_result_csv_path: Path, output_data_csv_path
             quotechar='|',
         )
         csv_writer.writeheader()
-        for account in accounts:
+        for account in filter_accounts(参与信用商店测试=True):
             index: int = account.index
             row: dict[str, str] = result_dict.get(index, {})
             csv_writer.writerow(row)

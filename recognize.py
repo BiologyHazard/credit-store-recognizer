@@ -60,7 +60,7 @@ def recognize_single(screenshot_path: Path,
     if output_images_folder is not None:
         output_image_path = output_images_folder / screenshot_path.relative_to(screenshots_folder)
         output_image_path.parent.mkdir(parents=True, exist_ok=True)
-        draw(Image.open(screenshot_path).resize((1920, 1080)), recognize_result).save(output_image_path)
+        draw(Image.open(screenshot_path).resize((1920, 1080)), recognize_result).resize((1280, 720)).save(output_image_path)
 
     return recognize_result
 
