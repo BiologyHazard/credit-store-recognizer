@@ -143,7 +143,7 @@ class ShopSolver:
         # self.tap_element("agent_unlock")
 
     def get_discount(self, item_img) -> tuple[bool, int]:
-        # 所有图片都匹配一遍，取最可能的
+        # 用digitReader识别折扣
         sold = self.is_sold(item_img)
         digit_part = item_img[54:106, 0:97]
         discount = self.digitReader.get_discount(digit_part)
@@ -152,6 +152,7 @@ class ShopSolver:
             raise
         return sold, discount
 
+        # 所有图片都匹配一遍，取最可能的
         # most_probable_key = '0'
         # most_probable_value = 0
         # for key in self.discount:

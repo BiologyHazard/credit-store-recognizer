@@ -101,7 +101,7 @@ class DigitReader:
                 self.spent_credit_number[j],
                 cv2.TM_CCOEFF_NORMED,
             )
-            threshold = 0.95
+            threshold = 0.9
             loc = np.where(res >= threshold)
             for i in range(len(loc[0])):
                 x = loc[1][i]

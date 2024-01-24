@@ -8,10 +8,10 @@ from . import typealias as tp
 from .log import logger
 
 
-def get_poly(x1: int, x2: int, y1: int, y2: int) -> tp.Rectangle:
-    x1, x2 = int(x1), int(x2)
-    y1, y2 = int(y1), int(y2)
-    return np.array([[x1, y1], [x1, y2], [x2, y2], [x2, y1]])
+# def get_poly(x1: int, x2: int, y1: int, y2: int) -> tp.Rectangle:
+#     x1, x2 = int(x1), int(x2)
+#     y1, y2 = int(y1), int(y2)
+#     return np.array([[x1, y1], [x1, y2], [x2, y2], [x2, y1]])
 
 
 def credit(img: tp.Image, draw: bool = False) -> list[tp.Scope]:
