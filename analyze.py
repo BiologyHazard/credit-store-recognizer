@@ -8,8 +8,8 @@ from pathlib import Path
 from typing import Any
 
 from accounts import Account, filter_accounts, get_account_by_nickname
-from credit_store_recognizer.solvers.shop import CreditStore
-from credit_store_recognizer.utils.log import logger, set_level
+from credit_store_recognizer.credit_store import CreditStore
+from credit_store_recognizer.log import logger, set_level
 from recognize import recognize_all
 
 shop_items = [

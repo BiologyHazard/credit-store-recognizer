@@ -6,18 +6,19 @@ from cv2.typing import MatLike
 
 # Image
 # Image = NDArray[np.int8]
-Image = MatLike
 Pixel = Tuple[int, int, int]
 
-GrayImage = NDArray[np.int8]
+type GrayImage = NDArray[np.int8]
+type ColorImage = MatLike
+type Image = GrayImage | ColorImage
 GrayPixel = int
 
 # Recognizer
-Range = Tuple[int, int]
-Coordinate = Tuple[int, int]
-Scope = Tuple[Coordinate, Coordinate]
+type Range = tuple[int, int]
+type Coordinate = tuple[int, int]
+type Scope = tuple[Coordinate, Coordinate]
 # Slice = Tuple[Range, Range]
-Slice = Any
+type Slice = slice | tuple[slice, slice]
 # Rectangle = Tuple[Coordinate, Coordinate, Coordinate, Coordinate]
 Rectangle = NDArray
 Location = Union[Rectangle, Scope, Coordinate]

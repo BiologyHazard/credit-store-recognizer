@@ -120,8 +120,10 @@ function single_account {
 $player_list = @(
 )
 
+$start_from = 0
 $csv = Import-Csv -Path "D:\BioHazard\Documents\Arknights\信用商店统计\accounts.csv" -Encoding UTF8 -Delimiter `t
 foreach ($row in $csv) {
+    $序号 = $row.序号
     $区服 = $row.区服
     $昵称 = $row.昵称
     $账号 = $row.账号
@@ -135,6 +137,9 @@ foreach ($row in $csv) {
         continue
     }
     if ($player_list -and ($player_list -notcontains "$区服-$昵称")) {
+        continue
+    }
+    if ($row.序号 -lt $start_from) {
         continue
     }
     single_account $区服 $昵称 $账号 $密码

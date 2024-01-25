@@ -3,9 +3,8 @@ from pathlib import Path
 
 from .. import __rootdir__
 
-# goods sold in shop
-shop_items = json.loads(
-    Path(f'{__rootdir__}/data/shop.json').read_text('utf-8'))
+credit_store_items = json.loads(
+    Path(f'{__rootdir__}/data/credit_store.json').read_text('utf-8'))
 
 # collection of the obtained ocr error
 ocr_error = json.loads(
