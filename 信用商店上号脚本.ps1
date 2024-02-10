@@ -2,12 +2,13 @@ $package_name = @{"官服"="com.hypergryph.arknights"; "b服"="com.hypergryph.arkni
 $activity_name = "com.u8.sdk.U8UnityContext"
 
 $MuMuManager = "D:\Program Files\Netease\MuMuPlayer-12.0\shell\MuMuManager.exe"
-$index = 4
+$emulator_index = 4
 $MuMuShared_folder = "C:\Users\Administrator\Documents\MuMu共享文件夹\Screenshots"
 $screenshot_folder = "D:\BioHazard\Documents\Arknights\信用商店统计\信用商店截图"
 
 function single_account {
     param (
+        [string]$index,
         [string]$server,
         [string]$nickname,
         [string]$phone,
@@ -16,12 +17,12 @@ function single_account {
 
     echo $server-$nickname
 
-    if ((& $MuMuManager api -v $index player_state | findstr check) -ne "check player state: state=start_finished") {
-        & $MuMuManager api -v $index launch_player
+    if ((& $MuMuManager api -v $emulator_index player_state | findstr check) -ne "check player state: state=start_finished") {
+        & $MuMuManager api -v $emulator_index launch_player
         sleep 30
     }
 
-    $address = & $MuMuManager adb -v $index
+    $address = & $MuMuManager adb -v $emulator_index
 
     adb connect $address
     # sleep 1
@@ -87,7 +88,18 @@ function single_account {
         sleep 20
     }
 
+    # adb -s $address shell input tap 793 717  # 同意协议
+    # sleep 1
+    # adb -s $address shell input tap 971 819
+    # sleep 4
+
     adb -s $address shell input keyevent 111  # Esc
+    sleep 1
+    adb -s $address shell input keyevent 111
+    sleep 1
+    adb -s $address shell input keyevent 111
+    sleep 1
+    adb -s $address shell input keyevent 111
     sleep 1
     adb -s $address shell input keyevent 111
     sleep 1
@@ -104,7 +116,7 @@ function single_account {
     adb -s $address shell input tap 1785 162
     sleep 3
     $datetime = Get-Date -Format "yyyyMMdd-HHmmss"
-    $filename = "MuMu12-$datetime-$server-$nickname.png"
+    $filename = "MuMu12-$datetime-$index-$server-$nickname.png"
     $android_path = "/storage/emulated/0/`$MuMu12Shared/Screenshots/$filename"
     $windows_source_path = "$MuMuShared_folder\$filename"
     $windows_destination_path = "$screenshot_folder\$server-$nickname"
@@ -136,11 +148,11 @@ foreach ($row in $csv) {
     if ($参与信用商店测试 -ne "TRUE" -or $要上号 -ne "TRUE") {
         continue
     }
-    if ($player_list -and ($player_list -notcontains "$区服-$昵称")) {
+    if ($player_list -and ($player_list -notcontains [int]$序号)) {
         continue
     }
-    if ($row.序号 -lt $start_from) {
+    if ([int]$序号 -lt $start_from) {
         continue
     }
-    single_account $区服 $昵称 $账号 $密码
+    single_account $序号 $区服 $昵称 $账号 $密码
 }
