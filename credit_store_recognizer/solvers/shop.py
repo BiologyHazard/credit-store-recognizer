@@ -53,16 +53,16 @@ class CreditStore(NamedTuple):
             [CreditStoreItem.from_json(item) for item in data['items']],
         )
 
-    @staticmethod
-    def is_same_store(*stores: CreditStore) -> bool:
-        # if a.credit != b.credit:
-        #     return False
-        if len(stores) < 2:
-            return True
-        for items in zip(*(store.items for store in stores)):
-            if not all(item.name == items[0].name for item in items):
-                return False
-        return True
+    # @staticmethod
+    # def is_same_store(*stores: CreditStore) -> bool:
+    #     # if a.credit != b.credit:
+    #     #     return False
+    #     if len(stores) < 2:
+    #         return True
+    #     for items in zip(*(store.items for store in stores)):
+    #         if not all(item.name == items[0].name for item in items):
+    #             return False
+    #     return True
 
 
 class ShopSolver:
