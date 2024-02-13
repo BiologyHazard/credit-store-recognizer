@@ -82,10 +82,10 @@ class DigitReader:
                     result[loc[1][i]] = j
 
         l = [str(result[k]) for k in sorted(result)]
-        s = "".join(l)
-        if s == "":
+        s = ''.join(l)
+        if s == '':
             return 0
-        return int("".join(l))
+        return int(''.join(l))
 
     def get_credit_number(self, digit_part):
         result = {}
@@ -111,4 +111,4 @@ class DigitReader:
 
         l = [str(result[k]) for k in sorted(result)]
 
-        return int("".join(l))
+        return int(''.join(l))

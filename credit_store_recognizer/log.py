@@ -12,18 +12,18 @@ import loguru
 logger = loguru.logger
 
 default_format: str = (
-    "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> "
-    "[<level>{level}</level>] "
-    "<cyan><underline>{name}</underline></cyan>:"
-    "<cyan>{function}</cyan>:<cyan>{line}</cyan> | "
-    "<level><normal>{message}</normal></level>"
-    # "<level>{message}</level>"
+    '<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> '
+    '[<level>{level}</level>] '
+    '<cyan><underline>{name}</underline></cyan>:'
+    '<cyan>{function}</cyan>:<cyan>{line}</cyan> | '
+    '<level><normal>{message}</normal></level>'
+    # '<level>{message}</level>'
 )
 
 logger.remove()
 logger_id: int = logger.add(
     sys.stderr,
-    level="DEBUG",
+    level='DEBUG',
     format=default_format,
 )
 

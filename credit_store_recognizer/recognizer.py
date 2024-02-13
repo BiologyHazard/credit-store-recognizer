@@ -42,20 +42,20 @@ def generate_template(item_name: str) -> tp.ColorImage:
 
 class CreditStoreRecognizer:
     def __init__(self) -> None:
-        self.sold_out_image = load_image(f"{__rootdir__}/resources/sold_out.png")
-        # self.credit_icon = load_image(f"{__rootdir__}/resources/credit_icon.png")
-        # self.spent_credit = load_image(f"{__rootdir__}/resources/spent_credit.png")
+        self.sold_out_image = load_image(f'{__rootdir__}/resources/sold_out.png')
+        # self.credit_icon = load_image(f'{__rootdir__}/resources/credit_icon.png')
+        # self.spent_credit = load_image(f'{__rootdir__}/resources/spent_credit.png')
 
-        # self.item_credit_icon = load_image(f"{__rootdir__}/resources/item_credit_icon.png")
-        # self.sold_credit_icon = load_image(f"{__rootdir__}/resources/sold_credit_icon.png")
+        # self.item_credit_icon = load_image(f'{__rootdir__}/resources/item_credit_icon.png')
+        # self.sold_credit_icon = load_image(f'{__rootdir__}/resources/sold_credit_icon.png')
 
         self.digit_reader = DigitReader()
         # self.discount = {}
         # self.discount_sold = {}
-        # for item in os.listdir(f"{__rootdir__}/resources/shop_discount"):
-        #     self.discount[item.replace(".png", "")] = load_image(f"{__rootdir__}/resources/shop_discount/{item}")
-        # for item in os.listdir(f"{__rootdir__}/resources/shop_discount"):
-        #     self.discount_sold[item.replace(".png", "")] = load_image(f"{__rootdir__}/resources/shop_discount_sold/{item}")
+        # for item in os.listdir(f'{__rootdir__}/resources/shop_discount'):
+        #     self.discount[item.replace('.png', '')] = load_image(f'{__rootdir__}/resources/shop_discount/{item}')
+        # for item in os.listdir(f'{__rootdir__}/resources/shop_discount'):
+        #     self.discount_sold[item.replace('.png', '')] = load_image(f'{__rootdir__}/resources/shop_discount_sold/{item}')
 
         self.item_name_templates = {
             item_name: generate_template(item_name)
@@ -64,9 +64,9 @@ class CreditStoreRecognizer:
         # for item_name, template in self.item_name_templates.items():
         #     save_image(template, f'{item_name}.png')
         self.sold_price_number = {}
-        for item in os.listdir(f"{__rootdir__}/resources/sold_price_number"):
-            self.sold_price_number[item.replace(".png", "")] = load_image(
-                f"{__rootdir__}/resources/sold_price_number/{item}")
+        for item in os.listdir(f'{__rootdir__}/resources/sold_price_number'):
+            self.sold_price_number[item.replace('.png', '')] = load_image(
+                f'{__rootdir__}/resources/sold_price_number/{item}')
 
     def recognize(self, image: tp.ColorImage) -> CreditStore:
         if image.shape != (1920, 1080, 3):
@@ -84,16 +84,16 @@ class CreditStoreRecognizer:
                 original_price = round(current_price / (1 - discount * 0.01))
                 if item_name == '龙门币':
                     if original_price == 200:
-                        item_name = "龙门币大"
+                        item_name = '龙门币大'
                     elif original_price == 100:
-                        item_name = "龙门币小"
+                        item_name = '龙门币小'
                     else:
                         logger.error((i, item_name, current_price))
                 elif item_name == '家具零件':
                     if original_price == 200:
-                        item_name = "家具零件大"
+                        item_name = '家具零件大'
                     elif original_price == 160:
-                        item_name = "家具零件小"
+                        item_name = '家具零件小'
                     else:
                         logger.error((i, item_name, original_price))
 
@@ -212,7 +212,7 @@ class CreditStoreRecognizer:
 
         l = [str(result[k]) for k in sorted(result)]
 
-        return int("".join(l))
+        return int(''.join(l))
 
 
 credit_store_recognizer = CreditStoreRecognizer()
