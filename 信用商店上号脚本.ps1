@@ -1,3 +1,7 @@
+# param (
+#     [int]$start_from
+# )
+
 $package_name = @{"官服"="com.hypergryph.arknights"; "b服"="com.hypergryph.arknights.bilibili"}
 $activity_name = "com.u8.sdk.U8UnityContext"
 
@@ -15,7 +19,7 @@ function single_account {
         [string]$password
     )
 
-    echo $server-$nickname
+    echo $index-$server-$nickname
 
     if ((& $MuMuManager api -v $emulator_index player_state | findstr check) -ne "check player state: state=start_finished") {
         & $MuMuManager api -v $emulator_index launch_player
@@ -116,16 +120,16 @@ function single_account {
     adb -s $address shell input tap 1785 162
     sleep 3
     $datetime = Get-Date -Format "yyyyMMdd-HHmmss"
-    $filename = "MuMu12-$datetime-$index-$server-$nickname.png"
+    $filename = "CreditStore-$datetime-$index-$server-$nickname.png"
     $android_path = "/storage/emulated/0/`$MuMu12Shared/Screenshots/$filename"
     $windows_source_path = "$MuMuShared_folder\$filename"
-    $windows_destination_path = "$screenshot_folder\$server-$nickname"
+    $windows_destination_path = "$screenshot_folder"
     adb -s $address shell screencap "'$android_path'"
     if (-not (Test-Path $windows_destination_path)) {
         New-Item -ItemType Directory -Path $windows_destination_path
     }
     # adb -s $address pull $android_path $windows_path
-    Copy-Item -Path $windows_source_path -Destination $windows_destination_path
+    Move-Item -Path $windows_source_path -Destination $windows_destination_path
     adb -s $address shell am force-stop $package_name.$server
 }
 
@@ -135,24 +139,24 @@ $player_list = @(
 $start_from = 0
 $csv = Import-Csv -Path "D:\BioHazard\Documents\Arknights\信用商店统计\accounts.csv" -Encoding UTF8 -Delimiter `t
 foreach ($row in $csv) {
-    $序号 = $row.序号
-    $区服 = $row.区服
-    $昵称 = $row.昵称
-    $账号 = $row.账号
-    $密码 = $row.密码
+    $index = $row.序号
+    $server = $row.区服
+    $nickname = $row.昵称
+    $phone = $row.账号
+    $password = $row.密码
     $参与信用商店测试 = $row.参与信用商店测试
     $要上号 = $row.要上号
-    if (-not ($区服 -and $昵称 -and $账号 -and $密码)) {
+    if (-not ($server -and $nickname -and $phone -and $password)) {
         continue
     }
-    if ($参与信用商店测试 -ne "TRUE" -or $要上号 -ne "TRUE") {
+    if (-not ($参与信用商店测试 -eq "TRUE" -and $要上号 -eq "TRUE")) {
         continue
     }
-    if ($player_list -and ($player_list -notcontains [int]$序号)) {
+    if ($player_list -and ($player_list -notcontains [int]$index)) {
         continue
     }
-    if ([int]$序号 -lt $start_from) {
+    if ([int]$index -lt $start_from) {
         continue
     }
-    single_account $序号 $区服 $昵称 $账号 $密码
+    single_account $index $server $nickname $phone $password
 }

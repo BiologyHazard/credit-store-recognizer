@@ -75,6 +75,12 @@ def path_to_datetime(path: Path) -> datetime.datetime:
         datetime_object = datetime.datetime.strptime(date_string, date_format).replace(year=2023)
         return datetime_object
 
+    if path.stem.startswith('CreditStore'):
+        date_string = path.stem[12:27]
+        date_format = "%Y%m%d-%H%M%S"
+        datetime_object = datetime.datetime.strptime(date_string, date_format)
+        return datetime_object
+
     date_string = path.stem[7:22]
     date_format = "%Y%m%d-%H%M%S"
     datetime_object = datetime.datetime.strptime(date_string, date_format)
@@ -90,8 +96,10 @@ def path_to_yj_date(path: Path) -> datetime.date:
 
 
 def path_to_person(path: Path) -> str:
-    if path.stem.startswith('CS-'):
+    if path.stem.startswith('CS'):
         return path.stem.split('-')[1]
+    if path.stem.startswith('CreditStore'):
+        return path.stem.split('-', maxsplit=4)[-1]
     return path.parts[-2]
 
 
