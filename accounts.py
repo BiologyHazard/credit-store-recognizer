@@ -49,6 +49,14 @@ def get_account_by_nickname(nickname: str) -> Account:
 
 
 @lru_cache
+def get_account_by_index(index: int) -> Account:
+    for account in accounts:
+        if account.index == index:
+            return account
+    raise ValueError(f'No account with index {index}')
+
+
+@lru_cache
 def filter_accounts(参与信用商店测试: bool | None = None, 参与裁缝测试: bool | None = None) -> list[Account]:
     return [
         account for account in accounts
