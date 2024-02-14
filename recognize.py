@@ -22,13 +22,13 @@ def recognize_single(screenshot_path: Path,
     img = load_image(screenshot_path.as_posix())
     img = cv2.resize(img, (1920, 1080))
     recognize_result: CreditStore = credit_store_recognizer.recognize(img)
-    logger.info(recognize_result)
+    logger.debug(recognize_result)
     result[screenshot_path] = recognize_result
 
     if output_json_folder is not None:
         output_json_path = output_json_folder / screenshot_path.relative_to(screenshots_folder).with_suffix('.json')
         output_json_path.parent.mkdir(parents=True, exist_ok=True)
-        output_json_path.write_text(json.dumps(recognize_result.model_dump_json(), ensure_ascii=False, indent=4), 'utf-8')
+        output_json_path.write_text(json.dumps(recognize_result.model_dump(), ensure_ascii=False, indent=4), 'utf-8')
 
     if output_images_folder is not None:
         output_image_path = output_images_folder / screenshot_path.relative_to(screenshots_folder)
@@ -66,12 +66,10 @@ def recognize_all(screenshots_folder: Path,
 
 if __name__ == '__main__':
     set_level('INFO')
-    screenshots_folder = Path(r'D:\BioHazard\Documents\Arknights\信用商店统计\信用商店截图')
-    output_json_folder = Path(r'D:\BioHazard\Documents\Arknights\信用商店统计\信用商店截图识别结果')
-    output_images_folder = Path(r'D:\BioHazard\Documents\Arknights\信用商店统计\信用商店截图标记')
+    credit_store_folder = Path(r'D:\BioHazard\Documents\Arknights\信用商店统计')
 
-    result: dict[Path, CreditStore] = recognize_all(screenshots_folder,
-                                                    output_json_folder=output_json_folder,
-                                                    output_images_folder=output_images_folder,
+    result: dict[Path, CreditStore] = recognize_all(credit_store_folder / '信用商店截图',
+                                                    output_json_folder=credit_store_folder / '信用商店截图识别结果',
+                                                    output_images_folder=credit_store_folder / '信用商店截图标记',
                                                     skip_recognized=False)
     print(result)

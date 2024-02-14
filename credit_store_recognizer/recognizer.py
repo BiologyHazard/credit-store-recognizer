@@ -182,7 +182,7 @@ recognize = credit_store_recognizer.recognize
 
 def draw_result(image: Image.Image, result: CreditStore) -> Image.Image:
     credit_pos = (1600, 30)
-    font = ImageFont.truetype('credit_store_recognizer/fonts/SourceHanSansCN-Medium.otf', 48)
+    font = ImageFont.truetype('fonts/SourceHanSansCN-Medium.otf', 48)
     draw = ImageDraw.Draw(image)
     draw.text(credit_pos, str(result.credit), 'black', font, stroke_width=5, stroke_fill='white')
     for item, ((x0, y0), (x1, y1)) in zip(result.items, scopes):

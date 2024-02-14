@@ -1,23 +1,22 @@
-from __future__ import annotations
-
 import csv
-from pathlib import Path
 from functools import lru_cache
+from pathlib import Path
+from typing import Literal
+
 from pydantic import BaseModel, Field, field_validator
-from typing import Literal, Optional
 
 
 class Account(BaseModel):
     index: int = Field(alias='序号')
-    owner: Optional[str] = Field(alias='号主')
-    bilibili_nickname: Optional[str] = Field(alias='bilibili 昵称')
-    server: Optional[Literal['官服', 'b服']] = Field(alias='区服')
-    account: Optional[str] = Field(alias='账号')
-    password: Optional[str] = Field(alias='密码')
-    id: Optional[str] = Field(alias='ID')
-    nickname: Optional[str] = Field(alias='昵称')
-    参与信用商店测试: Optional[bool] = Field(alias='参与信用商店测试')
-    参与裁缝测试: Optional[bool] = Field(alias='参与裁缝测试')
+    owner: str | None = Field(alias='号主')
+    bilibili_nickname: str | None = Field(alias='bilibili 昵称')
+    server: Literal['官服', 'b服'] | None = Field(alias='区服')
+    account: str | None = Field(alias='账号')
+    password: str | None = Field(alias='密码')
+    id: str | None = Field(alias='ID')
+    nickname: str | None = Field(alias='昵称')
+    参与信用商店测试: bool | None = Field(alias='参与信用商店测试')
+    参与裁缝测试: bool | None = Field(alias='参与裁缝测试')
 
     @field_validator(
         'owner', 'bilibili_nickname', 'server', 'account', 'password',
@@ -46,6 +45,14 @@ def get_account_by_nickname(nickname: str) -> Account:
         if account.owner == nickname:
             return account
     raise ValueError(f'No account named {nickname}')
+
+
+@lru_cache
+def get_account_by_index(index: int) -> Account:
+    for account in accounts:
+        if account.index == index:
+            return account
+    raise ValueError(f'No account with index {index}')
 
 
 @lru_cache
