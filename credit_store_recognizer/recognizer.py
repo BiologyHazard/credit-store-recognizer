@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
-from . import typealias as tp
+from . import typing as tp
 from .credit_store import CreditStore, CreditStoreItem
 from .data import credit_store_items
 from .image import linear_operation, load_image, scope2slice
@@ -39,6 +39,10 @@ class CreditStoreRecognizer:
             load_image(f'templates/bender_40/{i}.png', cv2.IMREAD_GRAYSCALE)
             for i in range(10)
         ]
+        self.bender_38: list[tp.GrayImage] = [
+            load_image(f'templates/bender_38/{i}.png', cv2.IMREAD_GRAYSCALE)
+            for i in range(10)
+        ]
         self.sourceHanSansCN_medium_40: list[tp.Image] = [
             load_image(f'templates/SourceHanSansCN-Medium_40/{i}.png', cv2.IMREAD_GRAYSCALE)
             for i in range(10)
@@ -69,14 +73,14 @@ class CreditStoreRecognizer:
                     elif original_price == 100:
                         item_name = '龙门币小'
                     else:
-                        raise RecognizeError(f'Failed to recognize {i=}, {item_name=}, {original_price=}, {current_price=}')
+                        raise RecognizeError(f'Failed to recognize {i=}, {item_name=}, {current_price=}, {discount=}')
                 elif item_name == '家具零件':
                     if original_price == 200:
                         item_name = '家具零件大'
                     elif original_price == 160:
                         item_name = '家具零件小'
                     else:
-                        raise RecognizeError(f'Failed to recognize {i=}, {item_name=}, {original_price=}, {current_price=}')
+                        raise RecognizeError(f'Failed to recognize {i=}, {item_name=}, {current_price=}, {discount=}')
 
             items.append(CreditStoreItem(name=item_name, discount=discount, sold=sold))
 
@@ -97,7 +101,7 @@ class CreditStoreRecognizer:
             min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
             scores[item_name] = max_val
 
-        threshold = 0.75
+        threshold = 0.70
         name = max(scores, key=lambda k: scores[k])
         if scores[name] >= threshold:
             return name
@@ -106,15 +110,15 @@ class CreditStoreRecognizer:
     def get_discount(self, item_img: tp.ColorImage) -> int:
         scope = ((0, 54), (97, 106))
         digit_part = item_img[scope2slice(scope)]
-        digit_part = digit_part[:, :, 1]  # green channel
+        b, digit_part, r = cv2.split(digit_part)  # green channel
         digit_part = cv2.threshold(digit_part, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
 
         threshold = 0.70
         result = {}
         for num in (0, 5, 7, 9):
-            templ = self.bender_40[num]
+            templ = self.bender_38[num]
             templ = cv2.threshold(templ, 128, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
-            res = cv2.matchTemplate(digit_part, templ, cv2.TM_CCORR_NORMED)
+            res = cv2.matchTemplate(digit_part, templ, cv2.TM_CCOEFF_NORMED)
             loc = np.where(res >= threshold)  # type: ignore
             for x in loc[1]:
                 if all(abs(o - x) >= 5 for o in result):
@@ -137,7 +141,7 @@ class CreditStoreRecognizer:
         image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         image = linear_operation(image, 50, 255)
 
-        threshold = 0.85
+        threshold = 0.80
         result = {}
         for num in range(10):
             res = cv2.matchTemplate(image, self.bender_40[num], cv2.TM_CCOEFF_NORMED)
@@ -156,7 +160,7 @@ class CreditStoreRecognizer:
         price_segment = cv2.cvtColor(price_segment, cv2.COLOR_BGR2GRAY)
         _, price_segment = cv2.threshold(price_segment, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
 
-        threshold = 0.80
+        threshold = 0.75
         result = {}
         for num in (0, 1, 2, 4, 5, 6, 8):
             templ = self.sourceHanSansCN_medium_40[num]
@@ -166,7 +170,6 @@ class CreditStoreRecognizer:
             for x in loc[1]:
                 if all(abs(o - x) >= 5 for o in result):
                     result[x] = num
-                    print(num, res.max())
         s: str = ''.join(str(result[k]) for k in sorted(result))
         if s == '':
             raise RecognizeError('Failed to recognize item price')
@@ -177,7 +180,7 @@ credit_store_recognizer = CreditStoreRecognizer()
 recognize = credit_store_recognizer.recognize
 
 
-def draw(image: Image.Image, result: CreditStore) -> Image.Image:
+def draw_result(image: Image.Image, result: CreditStore) -> Image.Image:
     credit_pos = (1600, 30)
     font = ImageFont.truetype('credit_store_recognizer/fonts/SourceHanSansCN-Medium.otf', 48)
     draw = ImageDraw.Draw(image)

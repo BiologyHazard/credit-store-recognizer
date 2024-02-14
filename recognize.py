@@ -1,17 +1,14 @@
-from __future__ import annotations
-
 import json
 import threading
 from pathlib import Path
 
 import cv2
 from PIL import Image
-from credit_store_recognizer.credit_store import CreditStore
 
+from credit_store_recognizer.credit_store import CreditStore
 from credit_store_recognizer.image import load_image
 from credit_store_recognizer.log import logger, set_level
-from credit_store_recognizer.recognizer import CreditStoreRecognizer
-from credit_store_recognizer.recognizer import draw
+from credit_store_recognizer.recognizer import credit_store_recognizer, draw_result
 
 
 @logger.catch
@@ -19,13 +16,12 @@ def recognize_single(screenshot_path: Path,
                      screenshots_folder: Path,
                      output_json_folder: Path | None,
                      output_images_folder: Path | None,
-                     shop_solver: CreditStoreRecognizer,
                      result: dict[Path, CreditStore]) -> CreditStore:
 
     logger.info(screenshot_path.relative_to(screenshots_folder).as_posix())
     img = load_image(screenshot_path.as_posix())
     img = cv2.resize(img, (1920, 1080))
-    recognize_result: CreditStore = shop_solver.recognize(img)
+    recognize_result: CreditStore = credit_store_recognizer.recognize(img)
     logger.info(recognize_result)
     result[screenshot_path] = recognize_result
 
@@ -37,7 +33,7 @@ def recognize_single(screenshot_path: Path,
     if output_images_folder is not None:
         output_image_path = output_images_folder / screenshot_path.relative_to(screenshots_folder)
         output_image_path.parent.mkdir(parents=True, exist_ok=True)
-        draw(Image.open(screenshot_path).resize((1920, 1080)), recognize_result).resize((1280, 720)).save(output_image_path)
+        draw_result(Image.open(screenshot_path).resize((1920, 1080)), recognize_result).resize((1280, 720)).save(output_image_path)
 
     return recognize_result
 
@@ -47,8 +43,6 @@ def recognize_all(screenshots_folder: Path,
                   output_json_folder: Path | None,
                   output_images_folder: Path | None,
                   skip_recognized: bool = True) -> dict[Path, CreditStore]:
-    shop_solver = CreditStoreRecognizer()
-
     result: dict[Path, CreditStore] = {}
     threads: list[threading.Thread] = []
     for path in screenshots_folder.rglob('*.png'):
@@ -58,7 +52,7 @@ def recognize_all(screenshots_folder: Path,
             continue
         thread = threading.Thread(
             target=recognize_single,
-            args=(path, screenshots_folder, output_json_folder, output_images_folder, shop_solver, result),
+            args=(path, screenshots_folder, output_json_folder, output_images_folder, result),
         )
         threads.append(thread)
         thread.start()
@@ -78,5 +72,6 @@ if __name__ == '__main__':
 
     result: dict[Path, CreditStore] = recognize_all(screenshots_folder,
                                                     output_json_folder=output_json_folder,
-                                                    output_images_folder=output_images_folder)
+                                                    output_images_folder=output_images_folder,
+                                                    skip_recognized=False)
     print(result)

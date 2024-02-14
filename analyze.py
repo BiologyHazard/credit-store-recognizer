@@ -255,15 +255,15 @@ def analyze(csv_folder: Path, output_result_csv_path: Path, output_data_csv_path
 
 if __name__ == '__main__':
     set_level('INFO')
-    screenshots_folder = Path(r'D:\BioHazard\Documents\Arknights\信用商店统计\信用商店截图')
-    output_json_folder = Path(r'D:\BioHazard\Documents\Arknights\信用商店统计\信用商店截图识别结果')
-    output_images_folder = Path(r'D:\BioHazard\Documents\Arknights\信用商店统计\信用商店截图标记')
+    root_folder = Path(r'D:\BioHazard\Documents\Arknights\信用商店统计')
+    screenshots_folder = root_folder / '信用商店截图'
+    output_json_folder = root_folder / '信用商店截图识别结果'
+    output_images_folder = root_folder / '信用商店截图标记'
+    output_csv_folder = root_folder / '信用商店按账号统计'
 
     result: dict[Path, CreditStore] = recognize_all(screenshots_folder,
                                                     output_json_folder=output_json_folder,
                                                     output_images_folder=output_images_folder)
 
-    recognize_result_folder = Path(r'D:\BioHazard\Documents\Arknights\信用商店统计\信用商店截图识别结果')
-    output_csv_folder = Path(r'D:\BioHazard\Documents\Arknights\信用商店统计\信用商店按账号统计')
-    json_to_csv(recognize_result_folder, output_csv_folder)
-    analyze(output_csv_folder, output_csv_folder.parent / '统计.csv', output_csv_folder.parent / '原始数据.csv')
+    json_to_csv(output_json_folder, output_csv_folder)
+    analyze(output_csv_folder, root_folder / '统计.csv', root_folder / '原始数据.csv')

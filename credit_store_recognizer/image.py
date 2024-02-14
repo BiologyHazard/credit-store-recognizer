@@ -1,9 +1,11 @@
 from __future__ import annotations
+
+from pathlib import Path
+
 import cv2
 import numpy as np
 
-from . import typealias as tp
-from pathlib import Path
+from . import typing as tp
 
 
 def load_image(image: str | Path | bytes | tp.Image, flags: cv2.ImreadModes = cv2.IMREAD_COLOR) -> tp.Image:
