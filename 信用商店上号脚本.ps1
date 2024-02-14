@@ -1,27 +1,32 @@
+# param (
+#     [int]$start_from
+# )
+
 $package_name = @{"官服"="com.hypergryph.arknights"; "b服"="com.hypergryph.arknights.bilibili"}
 $activity_name = "com.u8.sdk.U8UnityContext"
 
 $MuMuManager = "D:\Program Files\Netease\MuMuPlayer-12.0\shell\MuMuManager.exe"
-$index = 4
+$emulator_index = 4
 $MuMuShared_folder = "C:\Users\Administrator\Documents\MuMu共享文件夹\Screenshots"
 $screenshot_folder = "D:\BioHazard\Documents\Arknights\信用商店统计\信用商店截图"
 
 function single_account {
     param (
+        [string]$index,
         [string]$server,
         [string]$nickname,
         [string]$phone,
         [string]$password
     )
 
-    echo $server-$nickname
+    echo $index-$server-$nickname
 
-    if ((& $MuMuManager api -v $index player_state | findstr check) -ne "check player state: state=start_finished") {
-        & $MuMuManager api -v $index launch_player
+    if ((& $MuMuManager api -v $emulator_index player_state | findstr check) -ne "check player state: state=start_finished") {
+        & $MuMuManager api -v $emulator_index launch_player
         sleep 30
     }
 
-    $address = & $MuMuManager adb -v $index
+    $address = & $MuMuManager adb -v $emulator_index
 
     adb connect $address
     # sleep 1
@@ -87,7 +92,18 @@ function single_account {
         sleep 20
     }
 
+    # adb -s $address shell input tap 793 717  # 同意协议
+    # sleep 1
+    # adb -s $address shell input tap 971 819
+    # sleep 4
+
     adb -s $address shell input keyevent 111  # Esc
+    sleep 1
+    adb -s $address shell input keyevent 111
+    sleep 1
+    adb -s $address shell input keyevent 111
+    sleep 1
+    adb -s $address shell input keyevent 111
     sleep 1
     adb -s $address shell input keyevent 111
     sleep 1
@@ -104,16 +120,16 @@ function single_account {
     adb -s $address shell input tap 1785 162
     sleep 3
     $datetime = Get-Date -Format "yyyyMMdd-HHmmss"
-    $filename = "MuMu12-$datetime-$server-$nickname.png"
+    $filename = "CreditStore-$datetime-$index-$server-$nickname.png"
     $android_path = "/storage/emulated/0/`$MuMu12Shared/Screenshots/$filename"
     $windows_source_path = "$MuMuShared_folder\$filename"
-    $windows_destination_path = "$screenshot_folder\$server-$nickname"
+    $windows_destination_path = "$screenshot_folder"
     adb -s $address shell screencap "'$android_path'"
     if (-not (Test-Path $windows_destination_path)) {
         New-Item -ItemType Directory -Path $windows_destination_path
     }
     # adb -s $address pull $android_path $windows_path
-    Copy-Item -Path $windows_source_path -Destination $windows_destination_path
+    Move-Item -Path $windows_source_path -Destination $windows_destination_path
     adb -s $address shell am force-stop $package_name.$server
 }
 
@@ -123,24 +139,24 @@ $player_list = @(
 $start_from = 0
 $csv = Import-Csv -Path "D:\BioHazard\Documents\Arknights\信用商店统计\accounts.csv" -Encoding UTF8 -Delimiter `t
 foreach ($row in $csv) {
-    $序号 = $row.序号
-    $区服 = $row.区服
-    $昵称 = $row.昵称
-    $账号 = $row.账号
-    $密码 = $row.密码
+    $index = $row.序号
+    $server = $row.区服
+    $nickname = $row.昵称
+    $phone = $row.账号
+    $password = $row.密码
     $参与信用商店测试 = $row.参与信用商店测试
     $要上号 = $row.要上号
-    if (-not ($区服 -and $昵称 -and $账号 -and $密码)) {
+    if (-not ($server -and $nickname -and $phone -and $password)) {
         continue
     }
-    if ($参与信用商店测试 -ne "TRUE" -or $要上号 -ne "TRUE") {
+    if (-not ($参与信用商店测试 -eq "TRUE" -and $要上号 -eq "TRUE")) {
         continue
     }
-    if ($player_list -and ($player_list -notcontains "$区服-$昵称")) {
+    if ($player_list -and ($player_list -notcontains [int]$index)) {
         continue
     }
-    if ($row.序号 -lt $start_from) {
+    if ([int]$index -lt $start_from) {
         continue
     }
-    single_account $区服 $昵称 $账号 $密码
+    single_account $index $server $nickname $phone $password
 }
