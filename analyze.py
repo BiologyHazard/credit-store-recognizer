@@ -1,16 +1,14 @@
-from __future__ import annotations
-
 import csv
-import json
 from collections import defaultdict
+from datetime import date, datetime, timedelta
 from datetime import date, datetime, timedelta
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
 from accounts import Account, filter_accounts, get_account_by_index, get_account_by_nickname
-from credit_store_recognizer.solvers.shop import CreditStore
-from credit_store_recognizer.utils.log import logger, set_level
+from credit_store_recognizer.credit_store import CreditStore
+from credit_store_recognizer.log import logger, set_level
 from recognize import recognize_all
 
 shop_items = [
@@ -69,7 +67,6 @@ operators = [
 ]
 
 
-# @lru_cache
 def path_to_datetime(path: Path) -> datetime:
     if path.stem.startswith('CS'):
         date_string = path.stem.split('-')[2]
@@ -89,12 +86,10 @@ def path_to_datetime(path: Path) -> datetime:
     return datetime_object
 
 
-# @lru_cache
 def datetime_to_yj_date(t: datetime) -> date:
     return (t - timedelta(hours=4)).date()
 
 
-# @lru_cache
 def path_to_yj_date(path: Path) -> date:
     return datetime_to_yj_date(path_to_datetime(path))
 
@@ -117,9 +112,7 @@ def check(recognize_result_folder: Path):
         date1 = path_to_yj_date(path)
         if path_to_person(path) in ('aa', 'ab', 'ac', 'ad', 'ae', 'af', 'ag', 'ah', 'ai'):
             continue
-        with open(path, 'r', encoding='utf-8') as fp:
-            data = json.load(fp)
-        credit_store: CreditStore = CreditStore.from_json(data)
+        credit_store: CreditStore = CreditStore.model_validate_json(path.read_text('utf-8'))
         item_names1 = tuple(item.name for item in credit_store.items)
         credit_stores.append((person1, datetime1, date1, item_names1))
 
@@ -169,15 +162,13 @@ def json_to_csv(recognize_result_folder: Path,
         for json_path in json_paths:
             date_to_path[path_to_yj_date(json_path)] = json_path
 
-        for date, json_path in date_to_path.items():
-            with open(json_path, 'r', encoding='utf-8') as fp:
-                data = json.load(fp)
-            credit_store: CreditStore = CreditStore.from_json(data)
+        for date_, json_path in date_to_path.items():
+            credit_store: CreditStore = CreditStore.model_validate_json(json_path.read_text('utf-8'))
             if 忽略含有干员的商店 and any(item.name in operators for item in credit_store.items):
                 continue
             for i, item in enumerate(credit_store.items):
                 person_rows[person_index].append({
-                    '日期': date.strftime('%Y-%m-%d'),
+                    '日期': date_.strftime('%Y-%m-%d'),
                     '序号': i,
                     '名称': item.name,
                     '折扣': item.discount,
