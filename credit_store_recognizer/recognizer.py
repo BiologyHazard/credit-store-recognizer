@@ -27,7 +27,7 @@ scopes: list[tp.Scope] = [
 
 
 def get_template(item_name: str) -> tp.GrayImage:
-    template = load_image(f'templates/credit_store_items/{item_name}.png', cv2.IMREAD_GRAYSCALE)
+    template = load_image(f'resources/credit_store_items/{item_name}.png', cv2.IMREAD_GRAYSCALE)
     height, width = template.shape
     return template[scope2slice(((1, 1), (width-1, height-1)))]
 
@@ -36,19 +36,19 @@ class CreditStoreRecognizer:
     def __init__(self) -> None:
         self.sold_out_image = load_image(f'resources/sold_out.png')
         self.bender_40: list[tp.GrayImage] = [
-            load_image(f'templates/bender_40/{i}.png', cv2.IMREAD_GRAYSCALE)
+            load_image(f'resources/bender_40/{i}.png', cv2.IMREAD_GRAYSCALE)
             for i in range(10)
         ]
         self.bender_38: list[tp.GrayImage] = [
-            load_image(f'templates/bender_38/{i}.png', cv2.IMREAD_GRAYSCALE)
+            load_image(f'resources/bender_38/{i}.png', cv2.IMREAD_GRAYSCALE)
             for i in range(10)
         ]
         self.sourceHanSansCN_medium_40: list[tp.Image] = [
-            load_image(f'templates/SourceHanSansCN-Medium_40/{i}.png', cv2.IMREAD_GRAYSCALE)
+            load_image(f'resources/SourceHanSansCN-Medium_40/{i}.png', cv2.IMREAD_GRAYSCALE)
             for i in range(10)
         ]
 
-        self.item_name_templates = {
+        self.item_name_templates: dict[str, tp.GrayImage] = {
             item_name: get_template(item_name)
             for item_name in credit_store_items
         }
