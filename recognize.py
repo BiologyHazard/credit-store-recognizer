@@ -5,37 +5,13 @@ import threading
 from pathlib import Path
 
 import cv2
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image
 from credit_store_recognizer.credit_store import CreditStore
 
 from credit_store_recognizer.image import load_image
 from credit_store_recognizer.log import logger, set_level
 from credit_store_recognizer.recognizer import CreditStoreRecognizer
-
-
-def draw(image: Image.Image, result: CreditStore) -> Image.Image:
-    credit_pos = (1600, 30)
-    item_poses = [
-        ((25, 222), (399, 576)),
-        ((405, 222), (773, 576)),
-        ((784, 222), (1147, 576)),
-        ((1164, 222), (1521, 576)),
-        ((1544, 222), (1895, 576)),
-        ((25, 603), (399, 957)),
-        ((405, 603), (773, 957)),
-        ((784, 603), (1147, 957)),
-        ((1164, 603), (1521, 957)),
-        ((1544, 603), (1895, 957)),
-    ]
-    font = ImageFont.truetype(
-        r'C:\Users\Administrator\AppData\Local\Microsoft\Windows\Fonts\SourceHanSansSC-Regular.otf', 48)
-    draw = ImageDraw.Draw(image)
-    draw.text(credit_pos, str(result.credit), 'black', font, stroke_width=5, stroke_fill='white')
-    for (name, discount, sold), ((x0, y0), (x1, y1)) in zip(result.items, item_poses):
-        draw.multiline_text((x0, y0 + 100),
-                            f'{name}\n{discount}\n{sold}',
-                            'black', font, stroke_width=5, stroke_fill='white')
-    return image
+from credit_store_recognizer.recognizer import draw
 
 
 @logger.catch

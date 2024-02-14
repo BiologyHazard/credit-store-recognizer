@@ -1,19 +1,16 @@
-from __future__ import annotations
-
-import os
-from pathlib import Path
-
 import cv2
 import numpy as np
+from PIL import Image, ImageDraw, ImageFont
 
-from .credit_store import CreditStore, CreditStoreItem
-
-from . import __rootdir__
 from . import typealias as tp
+from .credit_store import CreditStore, CreditStoreItem
 from .data import credit_store_items
-from .digit_reader import DigitReader
-from .image import linear_operation, load_image, save_image, scope2slice
-from .log import logger
+from .image import linear_operation, load_image, scope2slice
+
+
+class RecognizeError(Exception):
+    pass
+
 
 scopes: list[tp.Scope] = [
     ((25, 222), (378, 576)),
@@ -29,75 +26,59 @@ scopes: list[tp.Scope] = [
 ]
 
 
-def generate_template(item_name: str) -> tp.ColorImage:
-    from PIL import Image, ImageDraw, ImageFont
-    font = ImageFont.truetype(f'{__rootdir__}/fonts/SourceHanSansCN-Medium.otf', 30)
-    # left, top, right, bottom = font.getbbox(item_name)
-    width, height = 300, 40  # right - left, bottom - top
-    image = Image.new('L', (width, height), 0)
-    draw = ImageDraw.Draw(image)
-    draw.text((width / 2, height / 2), item_name, 255, font, anchor='mm', features=['halt'])
-    return np.array(image)
+def get_template(item_name: str) -> tp.GrayImage:
+    template = load_image(f'templates/credit_store_items/{item_name}.png', cv2.IMREAD_GRAYSCALE)
+    height, width = template.shape
+    return template[scope2slice(((1, 1), (width-1, height-1)))]
 
 
 class CreditStoreRecognizer:
     def __init__(self) -> None:
-        self.sold_out_image = load_image(f'{__rootdir__}/resources/sold_out.png')
-        # self.credit_icon = load_image(f'{__rootdir__}/resources/credit_icon.png')
-        # self.spent_credit = load_image(f'{__rootdir__}/resources/spent_credit.png')
-
-        # self.item_credit_icon = load_image(f'{__rootdir__}/resources/item_credit_icon.png')
-        # self.sold_credit_icon = load_image(f'{__rootdir__}/resources/sold_credit_icon.png')
-
-        self.digit_reader = DigitReader()
-        # self.discount = {}
-        # self.discount_sold = {}
-        # for item in os.listdir(f'{__rootdir__}/resources/shop_discount'):
-        #     self.discount[item.replace('.png', '')] = load_image(f'{__rootdir__}/resources/shop_discount/{item}')
-        # for item in os.listdir(f'{__rootdir__}/resources/shop_discount'):
-        #     self.discount_sold[item.replace('.png', '')] = load_image(f'{__rootdir__}/resources/shop_discount_sold/{item}')
+        self.sold_out_image = load_image(f'resources/sold_out.png')
+        self.bender_40: list[tp.GrayImage] = [
+            load_image(f'templates/bender_40/{i}.png', cv2.IMREAD_GRAYSCALE)
+            for i in range(10)
+        ]
+        self.sourceHanSansCN_medium_40: list[tp.Image] = [
+            load_image(f'templates/SourceHanSansCN-Medium_40/{i}.png', cv2.IMREAD_GRAYSCALE)
+            for i in range(10)
+        ]
 
         self.item_name_templates = {
-            item_name: generate_template(item_name)
+            item_name: get_template(item_name)
             for item_name in credit_store_items
         }
-        # for item_name, template in self.item_name_templates.items():
-        #     save_image(template, f'{item_name}.png')
-        self.sold_price_number = {}
-        for item in os.listdir(f'{__rootdir__}/resources/sold_price_number'):
-            self.sold_price_number[item.replace('.png', '')] = load_image(
-                f'{__rootdir__}/resources/sold_price_number/{item}')
 
     def recognize(self, image: tp.ColorImage) -> CreditStore:
-        if image.shape != (1920, 1080, 3):
-            raise ValueError(f'image.shape must be (1920, 1080, 3), but got: {image.shape}')
-        credit: int = self.get_credits(image)
+        if image.shape != (1080, 1920, 3):
+            raise ValueError(f'image.shape must be (1080, 1920, 3), but got: {image.shape}')
+        credit: int = self.get_credit(image)
         items: list[CreditStoreItem] = []
         for i in range(10):
             item_image: tp.Image = self.get_item_image(image, i)
-            item_name = self.get_item_name(item_image)
-
-            shop_sold, discount = self.get_discount(image[scope2slice(scope)])
+            sold: bool = self.is_sold(item_image)
+            item_name: str = self.get_item_name(item_image, sold)
+            discount: int = self.get_discount(item_image)
 
             if item_name == '龙门币' or item_name == '家具零件':
-                current_price = self.get_item_price(image[scope2slice(scope)], shop_sold)
-                original_price = round(current_price / (1 - discount * 0.01))
+                current_price: int = self.get_item_price(item_image, sold)
+                original_price: int = round(current_price / (1 - discount * 0.01))
                 if item_name == '龙门币':
                     if original_price == 200:
                         item_name = '龙门币大'
                     elif original_price == 100:
                         item_name = '龙门币小'
                     else:
-                        logger.error((i, item_name, current_price))
+                        raise RecognizeError(f'Failed to recognize {i=}, {item_name=}, {original_price=}, {current_price=}')
                 elif item_name == '家具零件':
                     if original_price == 200:
                         item_name = '家具零件大'
                     elif original_price == 160:
                         item_name = '家具零件小'
                     else:
-                        logger.error((i, item_name, original_price))
+                        raise RecognizeError(f'Failed to recognize {i=}, {item_name=}, {original_price=}, {current_price=}')
 
-            items.append(CreditStoreItem(name=item_name, discount=discount, sold=shop_sold))
+            items.append(CreditStoreItem(name=item_name, discount=discount, sold=sold))
 
         return CreditStore(credit=credit, items=items)
 
@@ -110,110 +91,99 @@ class CreditStoreRecognizer:
         item_name_segment = cv2.cvtColor(item_name_segment, cv2.COLOR_BGR2GRAY)
         min_value, max_value = (177, 205) if sold else (49, 255)
         item_name_segment = linear_operation(item_name_segment, min_value, max_value)
-        save_image(item_name_segment, 'item_name_segment.png')
+        scores = {}
         for item_name, template in self.item_name_templates.items():
             res = cv2.matchTemplate(item_name_segment, template, cv2.TM_CCOEFF_NORMED)
             min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
-            print(item_name, max_val)
-            if max_val > 0.8:
-                return item_name
-        raise ValueError(f'Cannot recognize item name.')
+            scores[item_name] = max_val
 
-    def get_discount(self, item_img) -> tuple[bool, int]:
-        # 用digitReader识别折扣
-        sold = self.is_sold(item_img)
-        digit_part = item_img[54:106, 0:97]
-        discount = self.digit_reader.get_discount(digit_part)
+        threshold = 0.75
+        name = max(scores, key=lambda k: scores[k])
+        if scores[name] >= threshold:
+            return name
+        raise RecognizeError(f'Failed to recognize item name, but the most similar is {name!r} with score {scores[name]}')
+
+    def get_discount(self, item_img: tp.ColorImage) -> int:
+        scope = ((0, 54), (97, 106))
+        digit_part = item_img[scope2slice(scope)]
+        digit_part = digit_part[:, :, 1]  # green channel
+        digit_part = cv2.threshold(digit_part, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
+
+        threshold = 0.70
+        result = {}
+        for num in (0, 5, 7, 9):
+            templ = self.bender_40[num]
+            templ = cv2.threshold(templ, 128, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
+            res = cv2.matchTemplate(digit_part, templ, cv2.TM_CCORR_NORMED)
+            loc = np.where(res >= threshold)  # type: ignore
+            for x in loc[1]:
+                if all(abs(o - x) >= 5 for o in result):
+                    result[x] = num
+        s: str = ''.join(str(result[k]) for k in sorted(result))
+        discount: int = int(s) if s else 0
+
         if discount not in (0, 50, 75, 95, 99):
-            logger.error(f'折扣识别错误: {discount}')
-            raise
-        return sold, discount
-
-        # 所有图片都匹配一遍，取最可能的
-        # most_probable_key = '0'
-        # most_probable_value = 0
-        # for key in self.discount:
-        #     templ = self.discount_sold[key] if sold else self.discount[key]
-        #     res = cv2.matchTemplate(item_img, templ, cv2.TM_CCOEFF_NORMED)
-        #     min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
-        #     if max_val > most_probable_value:
-        #         most_probable_key = key
-        #         most_probable_value = max_val
-        # if most_probable_value > 0.8:
-        #     return sold, int(most_probable_key)
-        # else:
-        #     return sold, 0
+            raise RecognizeError(f'Failed to recognize discount, but the most similar is {discount}')
+        return discount
 
     def is_sold(self, item_img) -> bool:
         res = cv2.matchTemplate(item_img, self.sold_out_image, cv2.TM_CCOEFF_NORMED)
         min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
-        if max_val > 0.8:
-            return True
-        return False
+        return max_val > 0.8
 
-    def get_credits(self, img) -> int:
-        res = cv2.matchTemplate(img, self.credit_icon, cv2.TM_CCOEFF_NORMED)
-        min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
-        h, w = self.credit_icon.shape[:-1]
-        p0 = [max_loc[0] + w, max_loc[1]]
-        p1 = [p0[0] + 90, p0[1] + 40]
+    def get_credit(self, image) -> int:
+        scope = ((1710, 38), (1710+97, 38+41))
+        image = image[scope2slice(scope)]
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        image = linear_operation(image, 50, 255)
 
-        # cv2.imshow('', img[p0[1]:p1[1], p0[0]:p1[0]])
-        # cv2.waitKey(0)
-        # cv2.destroyAllWindows()
-
-        return self.digit_reader.get_recruit_ticket(img[p0[1]:p1[1], p0[0]:p1[0]])
-
-    def get_spent_credits(self, img) -> int:
-        res = cv2.matchTemplate(img, self.spent_credit, cv2.TM_CCOEFF_NORMED)
-        min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
-        h, w = self.spent_credit.shape[:-1]
-        p0 = [max_loc[0] + w, max_loc[1]]
-        p1 = [p0[0] + 200, p0[1] + 60]
-        spent_credits = self.digit_reader.get_credit_number(img[p0[1]:p1[1], p0[0]:p1[0]])
-        return spent_credits
-
-    def get_item_price(self, item_img, is_sold=False) -> int:
-        if is_sold:
-            res = cv2.matchTemplate(item_img, self.sold_credit_icon, cv2.TM_CCOEFF_NORMED)
-            min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
-
-            h, w = self.item_credit_icon.shape[:-1]
-            p0 = [max_loc[0] + w, max_loc[1]]
-            p1 = [p0[0] + 140, p0[1] + 40]
-            return self.get_sold_number(item_img[p0[1]:p1[1], p0[0]:p1[0]])
-        else:
-            res = cv2.matchTemplate(item_img, self.item_credit_icon, cv2.TM_CCOEFF_NORMED)
-            min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
-            h, w = self.item_credit_icon.shape[:-1]
-            p0 = [max_loc[0] + w, max_loc[1]]
-            p1 = [p0[0] + 140, p0[1] + 40]
-            return self.digit_reader.get_credit_number(item_img[p0[1]:p1[1], p0[0]:p1[0]])
-
-    def get_sold_number(self, digit_part: np.ndarray) -> int:
+        threshold = 0.85
         result = {}
-        for j in self.sold_price_number.keys():
-            res = cv2.matchTemplate(
-                digit_part,
-                self.sold_price_number[j],
-                cv2.TM_CCOEFF_NORMED,
-            )
-            threshold = 0.9
-            loc = np.where(res >= threshold)
-            for i in range(len(loc[0])):
-                x = loc[1][i]
-                accept = True
-                for o in result:
-                    if abs(o - x) < 5:
-                        accept = False
-                        break
-                if accept:
-                    result[loc[1][i]] = j
+        for num in range(10):
+            res = cv2.matchTemplate(image, self.bender_40[num], cv2.TM_CCOEFF_NORMED)
+            loc = np.where(res >= threshold)  # type: ignore
+            for x in loc[1]:
+                if all(abs(o - x) >= 5 for o in result):
+                    result[x] = num
+        s: str = ''.join(str(result[k]) for k in sorted(result))
+        if s == '':
+            raise RecognizeError('Failed to recognize credit')
+        return int(s)
 
-        l = [str(result[k]) for k in sorted(result)]
+    def get_item_price(self, item_img, sold=False) -> int:
+        scope = ((10, 294), (344, 345))
+        price_segment = item_img[scope2slice(scope)]
+        price_segment = cv2.cvtColor(price_segment, cv2.COLOR_BGR2GRAY)
+        _, price_segment = cv2.threshold(price_segment, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
 
-        return int(''.join(l))
+        threshold = 0.80
+        result = {}
+        for num in (0, 1, 2, 4, 5, 6, 8):
+            templ = self.sourceHanSansCN_medium_40[num]
+            templ = cv2.threshold(templ, 128, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
+            res = cv2.matchTemplate(price_segment, templ, cv2.TM_CCOEFF_NORMED)
+            loc = np.where(res >= threshold)  # type: ignore
+            for x in loc[1]:
+                if all(abs(o - x) >= 5 for o in result):
+                    result[x] = num
+                    print(num, res.max())
+        s: str = ''.join(str(result[k]) for k in sorted(result))
+        if s == '':
+            raise RecognizeError('Failed to recognize item price')
+        return int(s)
 
 
 credit_store_recognizer = CreditStoreRecognizer()
 recognize = credit_store_recognizer.recognize
+
+
+def draw(image: Image.Image, result: CreditStore) -> Image.Image:
+    credit_pos = (1600, 30)
+    font = ImageFont.truetype('credit_store_recognizer/fonts/SourceHanSansCN-Medium.otf', 48)
+    draw = ImageDraw.Draw(image)
+    draw.text(credit_pos, str(result.credit), 'black', font, stroke_width=5, stroke_fill='white')
+    for item, ((x0, y0), (x1, y1)) in zip(result.items, scopes):
+        draw.multiline_text((x0, y0 + 100),
+                            f'{item.name}\n{item.discount}\n{item.sold}',
+                            'black', font, stroke_width=5, stroke_fill='white')
+    return image

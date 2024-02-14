@@ -8,7 +8,7 @@ from cv2.typing import MatLike
 # Image = NDArray[np.int8]
 Pixel = Tuple[int, int, int]
 
-type GrayImage = NDArray[np.int8]
+type GrayImage = MatLike
 type ColorImage = MatLike
 type Image = GrayImage | ColorImage
 GrayPixel = int
