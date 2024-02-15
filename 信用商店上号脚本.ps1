@@ -137,7 +137,6 @@ $player_list = @(
 )
 $start_from = 0
 
-$start_from = 0
 $csv = Import-Csv -Path "D:\BioHazard\Documents\Arknights\信用商店统计\accounts.csv" -Encoding UTF8 -Delimiter `t
 foreach ($row in $csv) {
     $index = $row.序号

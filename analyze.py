@@ -71,7 +71,11 @@ def path_to_datetime(path: Path) -> datetime:
     if path.stem.startswith('CS'):
         date_string = path.stem.split('-')[2]
         date_format = "%m%d%H%M"
-        datetime_object = datetime.strptime(date_string, date_format).replace(year=2023)
+        datetime_object = datetime.strptime(date_string, date_format)
+        if datetime_object.month >= 10:
+            datetime_object = datetime_object.replace(year=2023)
+        else:
+            datetime_object = datetime_object.replace(year=2024)
         return datetime_object
 
     if path.stem.startswith('CreditStore'):
@@ -94,10 +98,9 @@ def path_to_yj_date(path: Path) -> date:
     return datetime_to_yj_date(path_to_datetime(path))
 
 
-# @lru_cache
 def path_to_person(path: Path) -> str:
     if path.stem.startswith('CS'):
-        return path.stem.split('-')[1]
+        return path.stem.split('-')[1].lower()
     if path.stem.startswith('CreditStore'):
         return path.stem.split('-', maxsplit=4)[-1]
     return path.parts[-2]

@@ -71,5 +71,5 @@ if __name__ == '__main__':
     result: dict[Path, CreditStore] = recognize_all(credit_store_folder / '信用商店截图',
                                                     output_json_folder=credit_store_folder / '信用商店截图识别结果',
                                                     output_images_folder=credit_store_folder / '信用商店截图标记',
-                                                    skip_recognized=False)
+                                                    skip_recognized=True)
     print(result)
